@@ -1,0 +1,372 @@
+# ============================================
+# StockPredictionPro - api_config.yaml
+# FastAPI backend configuration
+# ============================================
+
+# -------------------------------
+# API Server Configuration
+# -------------------------------
+server:
+  host: "0.0.0.0"
+  port: 8000
+  workers: 4
+  reload: false  # Set to true for development
+  log_level: "info"
+  access_log: true
+  
+  # SSL/TLS Configuration (production)
+  ssl:
+    enabled: false
+    cert_file: ""
+    key_file: ""
+    ca_certs: ""
+
+# -------------------------------
+# CORS (Cross-Origin Resource Sharing)
+# -------------------------------
+cors:
+  enabled: true
+  allow_origins: 
+    - "http://localhost:8501"  # Streamlit UI
+    - "http://localhost:3000"  # React (if used)
+    - "http://127.0.0.1:8501"
+  allow_credentials: true
+  allow_methods:
+    - "GET"
+    - "POST" 
+    - "PUT"
+    - "DELETE"
+    - "OPTIONS"
+  allow_headers:
+    - "*"
+  expose_headers: []
+  max_age: 600  # Preflight cache duration (seconds)
+
+# -------------------------------
+# Rate Limiting
+# -------------------------------
+rate_limiting:
+  enabled: true
+  
+  # Global rate limits
+  global:
+    calls_per_minute: 60
+    calls_per_hour: 1000
+    calls_per_day: 10000
+  
+  # Per-endpoint limits
+  endpoints:
+    "/api/v1/data/*":
+      calls_per_minute: 30
+      calls_per_hour: 500
+    "/api/v1/models/train":
+      calls_per_minute: 2
+      calls_per_hour: 20
+    "/api/v1/predictions/*":
+      calls_per_minute: 20
+      calls_per_hour: 300
+    "/api/v1/backtests/run":
+      calls_per_minute: 1
+      calls_per_hour: 10
+  
+  # Rate limit storage (redis recommended for production)
+  storage:
+    type: "memory"  # memory, redis
+    redis_url: "redis://localhost:6379/1"
+    key_prefix: "stockpred_ratelimit"
+
+# -------------------------------
+# Authentication & Security
+# -------------------------------
+auth:
+  enabled: false  # Set to true for production
+  
+  # JWT Configuration
+  jwt:
+    secret_key: "${JWT_SECRET}"  # From environment
+    algorithm: "HS256"
+    access_token_expire_minutes: 30
+    refresh_token_expire_days: 7
+  
+  # API Key Authentication (alternative to JWT)
+  api_key:
+    enabled: false
+    header_name: "X-API-Key"
+    valid_keys: []  # Add keys for production
+  
+  # OAuth2 (future enhancement)
+  oauth2:
+    enabled: false
+    provider: "google"  # google, github, etc.
+
+# -------------------------------
+# Request/Response Configuration
+# -------------------------------
+requests:
+  # Request size limits
+  max_request_size: 10485760  # 10MB
+  max_file_size: 5242880     # 5MB
+  
+  # Timeout settings
+  timeout:
+    read: 30
+    write: 30
+    connect: 10
+  
+  # Compression
+  compression:
+    enabled: true
+    minimum_size: 1000  # bytes
+    
+  # Request validation
+  validation:
+    strict_mode: true
+    allow_extra_fields: false
+
+# -------------------------------
+# Response Configuration
+# -------------------------------
+responses:
+  # Default response format
+  format:
+    include_request_id: true
+    include_timestamp: true
+    include_version: true
+  
+  # Error response format
+  errors:
+    include_stack_trace: false  # Set to true for development
+    include_error_code: true
+    mask_sensitive_data: true
+  
+  # Pagination defaults
+  pagination:
+    default_limit: 100
+    max_limit: 1000
+    
+  # Caching headers
+  cache:
+    data_endpoints: 300      # 5 minutes
+    model_endpoints: 3600    # 1 hour
+    static_endpoints: 86400  # 24 hours
+
+# -------------------------------
+# API Documentation
+# -------------------------------
+docs:
+  enabled: true
+  
+  # Swagger/OpenAPI UI
+  swagger:
+    url: "/docs"
+    title: "StockPredictionPro API"
+    description: "Advanced Stock Market Prediction API"
+    version: "1.0.0"
+    contact:
+      name: "StockPred Team"
+      url: "https://github.com/Faraazz05/StockPredictionPro"
+      email: "sp_mohdfaraz@outlook.com"
+    license:
+      name: "MIT"
+      url: "https://opensource.org/licenses/MIT"
+  
+  # ReDoc alternative documentation
+  redoc:
+    url: "/redoc"
+    enabled: true
+  
+  # Hide docs in production
+  hide_in_production: false
+
+# -------------------------------
+# Database Configuration (Optional)
+# -------------------------------
+database:
+  enabled: false
+  
+  # Database connection
+  connection:
+    url: "${DATABASE_URL}"  # From environment
+    echo: false            # Log SQL queries
+    pool_size: 10
+    max_overflow: 20
+    pool_timeout: 30
+    pool_recycle: 3600
+  
+  # Migration settings
+  migrations:
+    auto_upgrade: false
+    backup_before_upgrade: true
+
+# -------------------------------
+# Caching Configuration
+# -------------------------------
+caching:
+  enabled: true
+  
+  # Cache backend
+  backend:
+    type: "memory"  # memory, redis, memcached
+    redis_url: "redis://localhost:6379/0"
+    
+  # Cache TTL settings (seconds)
+  ttl:
+    data_cache: 300      # 5 minutes for stock data
+    model_cache: 3600    # 1 hour for model predictions
+    user_cache: 1800     # 30 minutes for user-specific data
+    system_cache: 86400  # 24 hours for system config
+  
+  # Cache size limits
+  limits:
+    max_entries: 1000
+    max_memory_mb: 256
+
+# -------------------------------
+# Background Tasks
+# -------------------------------
+background_tasks:
+  enabled: true
+  
+  # Task queue (redis recommended)
+  queue:
+    type: "memory"  # memory, redis, celery
+    redis_url: "redis://localhost:6379/2"
+    
+  # Worker configuration
+  workers:
+    max_workers: 4
+    timeout: 300  # 5 minutes
+    
+  # Scheduled tasks
+  scheduler:
+    enabled: false
+    timezone: "UTC"
+    tasks:
+      - name: "daily_data_update"
+        schedule: "0 2 * * *"  # 2 AM daily
+        function: "tasks.update_market_data"
+      - name: "weekly_model_retrain"
+        schedule: "0 3 * * 0"  # 3 AM every Sunday
+        function: "tasks.retrain_models"
+
+# -------------------------------
+# Monitoring & Observability
+# -------------------------------
+monitoring:
+  # Health checks
+  health:
+    enabled: true
+    endpoint: "/health"
+    detailed_endpoint: "/health/detailed"
+    
+  # Metrics collection
+  metrics:
+    enabled: true
+    prometheus:
+      enabled: false
+      endpoint: "/metrics"
+    custom_metrics:
+      - "request_count"
+      - "request_duration"
+      - "model_training_time"
+      - "prediction_accuracy"
+  
+  # Request tracing
+  tracing:
+    enabled: false
+    sample_rate: 0.1
+    jaeger_endpoint: ""
+  
+  # Error tracking
+  sentry:
+    enabled: false
+    dsn: "${SENTRY_DSN}"
+    sample_rate: 1.0
+    traces_sample_rate: 0.1
+
+# -------------------------------
+# API Versioning
+# -------------------------------
+versioning:
+  enabled: true
+  default_version: "v1"
+  supported_versions:
+    - "v1"
+  
+  # Version deprecation
+  deprecation:
+    warnings: true
+    sunset_header: true
+
+# -------------------------------
+# WebSocket Support (Future)
+# -------------------------------
+websocket:
+  enabled: false
+  endpoint: "/ws"
+  
+  # Connection limits
+  max_connections: 100
+  connection_timeout: 300
+  
+  # Message limits
+  max_message_size: 1048576  # 1MB
+  
+# -------------------------------
+# Development Settings
+# -------------------------------
+development:
+  debug: false
+  auto_reload: false
+  
+  # Development middleware
+  middleware:
+    debug_toolbar: false
+    profiler: false
+    
+  # Test mode settings
+  testing:
+    mock_external_apis: false
+    fixed_random_seed: 42
+    fast_model_training: true
+
+# -------------------------------
+# Production Settings
+# -------------------------------
+production:
+  # Security headers
+  security:
+    hsts: true
+    csp: true
+    frame_options: "DENY"
+    content_type_options: true
+    
+  # Performance optimizations
+  performance:
+    gzip_compression: true
+    static_file_caching: true
+    database_pooling: true
+    
+  # Logging
+  logging:
+    structured: true
+    json_format: true
+    log_requests: true
+    log_responses: false
+    
+# -------------------------------
+# Feature Flags
+# -------------------------------
+features:
+  # API features that can be toggled
+  data_export: true
+  model_training: true
+  backtesting: true
+  real_time_data: false
+  advanced_analytics: true
+  
+  # Experimental features
+  experimental:
+    ml_pipelines: false
+    auto_trading: false
+    portfolio_optimization: false

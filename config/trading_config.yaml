@@ -1,0 +1,630 @@
+# ============================================
+# StockPredictionPro - trading_config.yaml
+# Trading signals and strategy configuration
+# ============================================
+
+# -------------------------------
+# Global Trading Settings
+# -------------------------------
+global:
+  # Trading universe
+  universe:
+    default_symbols: ["AAPL", "MSFT", "GOOGL", "INFY.NS", "TCS.NS"]
+    max_positions: 10
+    position_concentration_limit: 0.2  # Maximum 20% in single position
+    
+  # Market hours and calendar
+  market:
+    timezone: "Asia/Kolkata"
+    trading_calendar: "NSE"  # NSE, NYSE, NASDAQ
+    market_hours:
+      start: "09:15"
+      end: "15:30"
+    weekend_trading: false
+    
+  # Base currency
+  base_currency: "INR"  # INR, USD
+  
+  # Risk management
+  risk:
+    max_portfolio_risk: 0.15  # 15% maximum portfolio risk
+    max_daily_loss: 0.05      # 5% maximum daily loss
+    emergency_stop_loss: 0.10  # 10% emergency stop
+
+# -------------------------------
+# Signal Generation
+# -------------------------------
+signals:
+  # Signal sources
+  sources:
+    model_predictions:
+      enabled: true
+      weight: 0.7  # 70% weight
+      
+      # Model-based signal configuration
+      regression_signals:
+        enabled: true
+        
+        # Price prediction signals
+        price_threshold: 0.01  # 1% minimum predicted move
+        confidence_threshold: 0.6  # 60% minimum confidence
+        
+        # Signal generation rules
+        rules:
+          strong_buy: 
+            predicted_return: ">= 0.03"    # >= 3% predicted return
+            confidence: ">= 0.8"           # >= 80% confidence
+            
+          buy:
+            predicted_return: ">= 0.015"   # >= 1.5% predicted return  
+            confidence: ">= 0.65"          # >= 65% confidence
+            
+          hold:
+            predicted_return: "[-0.01, 0.015]"  # -1% to 1.5% predicted return
+            
+          sell:
+            predicted_return: "<= -0.015"  # <= -1.5% predicted return
+            confidence: ">= 0.65"          # >= 65% confidence
+            
+          strong_sell:
+            predicted_return: "<= -0.03"   # <= -3% predicted return
+            confidence: ">= 0.8"           # >= 80% confidence
+            
+      classification_signals:
+        enabled: true
+        
+        # Direction prediction signals
+        probability_threshold: 0.6  # 60% minimum class probability
+        
+        # Signal mapping
+        class_to_signal:
+          "Strong_Up": "strong_buy"
+          "Up": "buy"
+          "Sideways": "hold"
+          "Down": "sell"
+          "Strong_Down": "strong_sell"
+          
+    technical_indicators:
+      enabled: true
+      weight: 0.3  # 30% weight
+      
+      # Moving average signals
+      ma_crossover:
+        enabled: true
+        fast_period: 20
+        slow_period: 50
+        
+        signals:
+          buy: "sma_20 > sma_50 AND sma_20_prev <= sma_50_prev"
+          sell: "sma_20 < sma_50 AND sma_20_prev >= sma_50_prev"
+          
+      # RSI signals
+      rsi_signals:
+        enabled: true
+        period: 14
+        
+        signals:
+          buy: "rsi < 30"  # Oversold
+          sell: "rsi > 70"  # Overbought
+          
+      # MACD signals
+      macd_signals:
+        enabled: true
+        
+        signals:
+          buy: "macd > signal AND macd_prev <= signal_prev"
+          sell: "macd < signal AND macd_prev >= signal_prev"
+          
+      # Bollinger Bands signals
+      bollinger_signals:
+        enabled: true
+        
+        signals:
+          buy: "close < bb_lower"
+          sell: "close > bb_upper"
+          
+  # Signal combination
+  combination:
+    method: "weighted_average"  # weighted_average, voting, consensus
+    
+    # Consensus requirements
+    consensus:
+      min_agreement: 0.6  # 60% of signals must agree
+      
+    # Signal filtering
+    filters:
+      volume_confirmation:
+        enabled: true
+        min_volume_ratio: 1.2  # 120% of average volume
+        
+      trend_confirmation:
+        enabled: true
+        min_trend_strength: 0.5  # ADX > 25 or similar
+        
+      volatility_filter:
+        enabled: true
+        max_volatility: 0.05  # 5% daily volatility limit
+        
+  # Signal timing
+  timing:
+    signal_frequency: "daily"  # daily, intraday, weekly
+    lookback_period: 5  # Days to look back for confirmation
+    
+    # Signal decay
+    decay:
+      enabled: true
+      half_life_days: 3  # Signal strength halves every 3 days
+
+# -------------------------------
+# Position Sizing
+# -------------------------------
+position_sizing:
+  # Default method
+  method: "fixed_percentage"  # fixed_percentage, volatility_adjusted, kelly_criterion, risk_parity
+  
+  # Fixed percentage sizing
+  fixed_percentage:
+    default_size: 0.1  # 10% of portfolio per position
+    
+  # Volatility-adjusted sizing
+  volatility_adjusted:
+    enabled: true
+    target_volatility: 0.02  # 2% daily volatility target
+    lookback_period: 20      # 20 days for volatility calculation
+    min_size: 0.05          # 5% minimum position
+    max_size: 0.2           # 20% maximum position
+    
+  # Kelly Criterion sizing
+  kelly_criterion:
+    enabled: false
+    
+    # Kelly parameters
+    win_rate_estimate: 0.55  # 55% estimated win rate
+    avg_win_loss_ratio: 1.5  # Average win/loss ratio
+    kelly_fraction: 0.25     # Use 25% of full Kelly (conservative)
+    
+  # Risk parity sizing
+  risk_parity:
+    enabled: false
+    risk_budget_method: "equal_risk"  # equal_risk, inverse_volatility
+    
+  # Dynamic sizing based on confidence
+  confidence_scaling:
+    enabled: true
+    
+    # Scaling factors based on signal confidence
+    scaling_factors:
+      high_confidence: 1.5    # >= 80% confidence: 1.5x size
+      medium_confidence: 1.0  # 60-80% confidence: 1.0x size  
+      low_confidence: 0.5     # < 60% confidence: 0.5x size
+
+# -------------------------------
+# Risk Management
+# -------------------------------
+risk_management:
+  # Stop-loss orders
+  stop_loss:
+    enabled: true
+    
+    # ATR-based stops
+    atr_stops:
+      enabled: true
+      atr_period: 14
+      atr_multiplier: 2.0  # Stop at 2x ATR from entry
+      
+    # Percentage stops
+    percentage_stops:
+      enabled: true
+      long_stop: 0.02   # 2% stop loss for long positions
+      short_stop: 0.02  # 2% stop loss for short positions
+      
+    # Trailing stops
+    trailing_stops:
+      enabled: true
+      trail_percent: 0.02     # 2% trailing stop
+      activation_percent: 0.05 # Activate after 5% profit
+      
+  # Take-profit orders
+  take_profit:
+    enabled: true
+    
+    # Fixed take-profit levels
+    fixed_targets:
+      enabled: true
+      target_1: 0.03  # 3% first target
+      target_2: 0.05  # 5% second target
+      
+    # Risk-reward ratio targets
+    risk_reward_targets:
+      enabled: true
+      min_ratio: 2.0    # Minimum 2:1 risk-reward
+      preferred_ratio: 3.0  # Preferred 3:1 risk-reward
+      
+  # Position limits
+  position_limits:
+    max_positions: 10
+    max_position_size: 0.2      # 20% maximum per position
+    max_sector_exposure: 0.4    # 40% maximum per sector
+    max_correlation: 0.7        # Maximum correlation between positions
+    
+  # Portfolio-level risk
+  portfolio_risk:
+    var_limit: 0.05    # 5% Value at Risk limit (95% confidence)
+    max_drawdown: 0.15 # 15% maximum drawdown limit
+    
+    # Risk monitoring
+    monitoring:
+      calculate_var: true
+      var_confidence: 0.95
+      var_lookback: 252  # 1 year
+      
+      # Alerts
+      alerts:
+        high_correlation: 0.8
+        concentration_risk: 0.25
+        drawdown_warning: 0.10
+
+# -------------------------------
+# Order Management
+# -------------------------------
+order_management:
+  # Order types
+  order_types:
+    market_orders: true
+    limit_orders: true
+    stop_orders: true
+    stop_limit_orders: true
+    
+  # Default order type
+  default_order_type: "limit"
+  
+  # Limit order configuration  
+  limit_orders:
+    price_improvement: 0.001  # 0.1% price improvement attempt
+    timeout_minutes: 30       # Cancel after 30 minutes
+    
+  # Order sizing
+  order_sizing:
+    min_order_value: 1000     # Minimum ₹1000 order value
+    max_order_value: 100000   # Maximum ₹1,00,000 order value
+    
+  # Order timing
+  timing:
+    avoid_market_open: true   # Avoid first 15 minutes
+    avoid_market_close: true  # Avoid last 15 minutes
+    
+    # Optimal execution times
+    preferred_times:
+      - "10:00-11:30"  # Morning session
+      - "14:00-15:00"  # Afternoon session
+
+# -------------------------------
+# Transaction Costs
+# -------------------------------
+costs:
+  # Brokerage and fees
+  brokerage:
+    equity_intraday: 0.0003   # 0.03% or ₹20 per executed order, whichever is lower
+    equity_delivery: 0.0025   # 0.25% or ₹20 per executed order, whichever is lower
+    
+  # Exchange charges
+  exchange_charges:
+    nse_equity: 0.00003450    # NSE equity charges
+    
+  # Regulatory charges
+  regulatory:
+    stt: 0.001               # Securities Transaction Tax (0.1% on sell side)
+    stamp_duty: 0.00003      # Stamp duty (0.003% on buy side)
+    gst: 0.18                # GST on brokerage (18%)
+    
+  # Total cost estimate
+  total_cost_estimate:
+    buy_side: 0.0015         # ~0.15% total cost for buying
+    sell_side: 0.0025        # ~0.25% total cost for selling
+    round_trip: 0.004        # ~0.4% total round-trip cost
+    
+  # Slippage estimates
+  slippage:
+    market_orders: 0.0005    # 0.05% average slippage
+    limit_orders: 0.0001     # 0.01% average slippage
+    
+    # Slippage scaling by order size
+    scaling:
+      small_order: 0.0002    # < ₹10,000
+      medium_order: 0.0005   # ₹10,000 - ₹50,000  
+      large_order: 0.001     # > ₹50,000
+
+# -------------------------------
+# Backtesting Configuration
+# -------------------------------
+backtesting:
+  # Backtest parameters
+  parameters:
+    initial_capital: 100000   # ₹1,00,000 initial capital
+    start_date: "2023-01-01"
+    end_date: "2024-12-31"
+    rebalance_frequency: "daily"
+    
+  # Execution simulation
+  execution:
+    fill_ratio: 0.95         # 95% of orders get filled
+    partial_fills: true      # Allow partial fills
+    realistic_slippage: true # Use realistic slippage model
+    
+  # Performance calculation
+  performance:
+    benchmark: "^NSEI"       # NIFTY 50 as benchmark
+    risk_free_rate: 0.06     # 6% risk-free rate (govt bonds)
+    
+    # Metrics to calculate
+    metrics:
+      - "total_return"
+      - "annualized_return"
+      - "volatility"  
+      - "sharpe_ratio"
+      - "sortino_ratio"
+      - "max_drawdown"
+      - "calmar_ratio"
+      - "win_rate"
+      - "profit_factor"
+      - "average_trade_duration"
+      
+  # Walk-forward analysis
+  walk_forward:
+    enabled: true
+    training_period_months: 12  # 12 months training
+    testing_period_months: 3    # 3 months testing
+    step_size_months: 1         # Roll forward by 1 month
+
+# -------------------------------
+# Strategy Templates
+# -------------------------------
+strategies:
+  # Trend Following Strategy
+  trend_following:
+    name: "Multi-Timeframe Trend Following"
+    
+    signals:
+      primary: "ma_crossover"
+      confirmation: ["macd_signals", "adx_trend"]
+      
+    position_sizing: "volatility_adjusted"
+    
+    risk_management:
+      stop_loss: "atr_stops"
+      take_profit: "risk_reward_targets"
+      
+    filters:
+      - "volume_confirmation"
+      - "trend_confirmation"
+      
+  # Mean Reversion Strategy  
+  mean_reversion:
+    name: "Bollinger Band Mean Reversion"
+    
+    signals:
+      primary: "bollinger_signals"
+      confirmation: ["rsi_signals"]
+      
+    position_sizing: "fixed_percentage"
+    
+    risk_management:
+      stop_loss: "percentage_stops"
+      take_profit: "fixed_targets"
+      
+  # Model-Based Strategy
+  model_based:
+    name: "ML Model Predictions"
+    
+    signals:
+      primary: "model_predictions"
+      confirmation: ["technical_indicators"]
+      
+    position_sizing: "confidence_scaling"
+    
+    risk_management:
+      stop_loss: "trailing_stops"
+      take_profit: "risk_reward_targets"
+      
+  # Momentum Strategy
+  momentum:
+    name: "Price and Volume Momentum"
+    
+    signals:
+      primary: "roc_signals"
+      confirmation: ["volume_breakout", "rsi_momentum"]
+      
+    position_sizing: "kelly_criterion"
+
+# -------------------------------
+# Portfolio Management
+# -------------------------------
+portfolio:
+  # Portfolio construction
+  construction:
+    method: "signal_based"  # signal_based, equal_weight, risk_parity
+    
+    # Rebalancing
+    rebalancing:
+      frequency: "weekly"   # daily, weekly, monthly
+      threshold: 0.05       # Rebalance if allocation drifts > 5%
+      
+    # Diversification
+    diversification:
+      max_positions: 10
+      min_positions: 3
+      max_sector_weight: 0.4
+      max_correlation: 0.7
+      
+  # Cash management
+  cash_management:
+    target_cash_ratio: 0.05  # Keep 5% cash
+    min_cash_ratio: 0.02     # Minimum 2% cash
+    max_cash_ratio: 0.20     # Maximum 20% cash
+    
+  # Performance monitoring
+  monitoring:
+    frequency: "daily"
+    
+    # Alert conditions
+    alerts:
+      drawdown_limit: 0.10   # Alert at 10% drawdown
+      concentration_risk: 0.25 # Alert if position > 25%
+      correlation_spike: 0.8  # Alert if correlation > 80%
+
+# -------------------------------
+# Risk Controls
+# -------------------------------
+risk_controls:
+  # Circuit breakers
+  circuit_breakers:
+    daily_loss_limit: 0.05      # Stop trading at 5% daily loss
+    consecutive_losses: 5       # Stop after 5 consecutive losses
+    drawdown_limit: 0.15        # Stop at 15% drawdown
+    
+  # Position controls  
+  position_controls:
+    max_leverage: 1.0           # No leverage allowed
+    position_timeout_days: 30   # Close positions after 30 days
+    
+  # Market condition filters
+  market_filters:
+    high_volatility_threshold: 0.03  # 3% daily volatility
+    low_volume_threshold: 0.5        # 50% of average volume
+    
+    # Actions during adverse conditions
+    actions:
+      high_volatility: "reduce_position_size"
+      low_volume: "avoid_trading"
+      market_crash: "close_all_positions"
+
+# -------------------------------
+# Performance Attribution
+# -------------------------------
+attribution:
+  # Factor analysis
+  factors:
+    - "market_beta"     # Market exposure
+    - "size_factor"     # Small vs large cap exposure  
+    - "value_factor"    # Value vs growth exposure
+    - "momentum_factor" # Momentum exposure
+    - "volatility_factor" # Low volatility exposure
+    
+  # Sector attribution
+  sectors:
+    - "Information Technology"
+    - "Financial Services"  
+    - "Consumer Goods"
+    - "Healthcare"
+    - "Energy"
+    - "Materials"
+    
+  # Attribution frequency
+  frequency: "monthly"
+
+# -------------------------------
+# Reporting
+# -------------------------------
+reporting:
+  # Report generation
+  reports:
+    daily_pnl: true
+    weekly_summary: true
+    monthly_performance: true
+    quarterly_review: true
+    
+  # Report content
+  content:
+    performance_metrics: true
+    risk_metrics: true
+    attribution_analysis: true
+    trade_analysis: true
+    
+  # Export formats
+  formats: ["pdf", "html", "csv", "json"]
+  
+  # Distribution
+  distribution:
+    email_reports: false
+    save_to_file: true
+    
+# -------------------------------
+# Alerts and Notifications
+# -------------------------------
+alerts:
+  # Alert types
+  types:
+    trade_signals: true
+    risk_breaches: true
+    performance_alerts: true
+    system_errors: true
+    
+  # Delivery methods
+  delivery:
+    console: true
+    file_log: true
+    email: false
+    slack: false
+    webhook: false
+    
+  # Alert thresholds
+  thresholds:
+    significant_move: 0.02      # 2% price move
+    high_volume: 2.0            # 2x average volume
+    risk_breach: "any"          # Any risk limit breach
+    
+# -------------------------------
+# Paper Trading
+# -------------------------------
+paper_trading:
+  enabled: true
+  
+  # Simulation parameters
+  simulation:
+    initial_capital: 100000
+    realistic_execution: true
+    include_costs: true
+    include_slippage: true
+    
+  # Logging
+  logging:
+    log_all_signals: true
+    log_rejected_trades: true
+    
+# -------------------------------
+# Integration Settings
+# -------------------------------
+integration:
+  # Broker integration (future)
+  broker:
+    enabled: false
+    provider: "zerodha"  # zerodha, upstox, angelbroking
+    
+  # Data feeds
+  data_feeds:
+    real_time: false
+    delayed: true
+    
+  # External tools
+  external:
+    portfolio_tracker: false
+    tax_reporting: false
+
+# -------------------------------
+# Compliance & Governance  
+# -------------------------------
+compliance:
+  # Regulatory compliance
+  regulatory:
+    pattern_day_trading: false   # Not applicable in India
+    position_limits: true
+    
+  # Audit trail
+  audit:
+    log_all_decisions: true
+    log_risk_overrides: true
+    
+  # Documentation
+  documentation:
+    trade_rationale: true
+    risk_assessment: true

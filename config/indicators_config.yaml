@@ -1,0 +1,611 @@
+# ============================================
+# StockPredictionPro - indicators_config.yaml
+# Technical indicators configuration
+# ============================================
+
+# -------------------------------
+# Global Indicator Settings
+# -------------------------------
+global:
+  # Default calculation parameters
+  calculation:
+    precision: 6  # decimal places for indicator values
+    fill_method: "forward"  # forward, backward, interpolate
+    min_periods_ratio: 0.8  # minimum 80% of period data required
+    
+  # Performance settings
+  performance:
+    vectorized_calculation: true
+    cache_intermediate_results: true
+    parallel_processing: false  # enable for large datasets
+    
+  # Data validation
+  validation:
+    check_data_quality: true
+    handle_missing_values: true
+    detect_outliers: true
+    outlier_method: "iqr"  # iqr, zscore, isolation_forest
+
+# -------------------------------
+# Trend Indicators
+# -------------------------------
+trend:
+  # Simple Moving Averages
+  sma:
+    enabled: true
+    periods: [5, 10, 20, 50, 100, 200]
+    default_periods: [20, 50]  # Used in UI by default
+    description: "Simple Moving Average - basic trend indicator"
+    
+  # Exponential Moving Averages  
+  ema:
+    enabled: true
+    periods: [12, 26, 50, 100, 200]
+    default_periods: [12, 26]
+    smoothing_factor: 2  # alpha = 2/(period+1)
+    description: "Exponential Moving Average - trend with recent price emphasis"
+    
+  # Triple Exponential Moving Average
+  tema:
+    enabled: true
+    periods: [14, 21, 50]
+    default_periods: [21]
+    description: "Triple EMA - smoother trend indicator with less lag"
+    
+  # Weighted Moving Average
+  wma:
+    enabled: false
+    periods: [10, 20, 50]
+    default_periods: [20]
+    description: "Weighted Moving Average - linear weight to recent prices"
+    
+  # Hull Moving Average
+  hma:
+    enabled: false
+    periods: [14, 21, 50]
+    default_periods: [21]
+    description: "Hull Moving Average - reduced lag trend indicator"
+    
+  # Kaufman's Adaptive Moving Average
+  kama:
+    enabled: false
+    period: 14
+    fast_sc: 2   # fast smoothing constant
+    slow_sc: 30  # slow smoothing constant
+    description: "Adaptive MA that adjusts to market volatility"
+    
+  # Parabolic SAR
+  parabolic_sar:
+    enabled: true
+    acceleration: 0.02
+    max_acceleration: 0.2
+    description: "Parabolic Stop and Reverse - trend reversal indicator"
+    
+  # Average Directional Index (ADX)
+  adx:
+    enabled: true
+    period: 14
+    threshold_strong: 25
+    threshold_very_strong: 50
+    description: "Average Directional Index - trend strength indicator"
+    
+  # Aroon Indicator
+  aroon:
+    enabled: true
+    period: 14
+    description: "Aroon indicator - identifies trend changes"
+    
+  # Ichimoku Cloud
+  ichimoku:
+    enabled: true
+    tenkan_period: 9   # conversion line
+    kijun_period: 26   # base line
+    senkou_span_b: 52  # leading span B
+    displacement: 26   # displacement for cloud
+    description: "Ichimoku Cloud - comprehensive trend system"
+
+# -------------------------------
+# Momentum Indicators
+# -------------------------------
+momentum:
+  # Relative Strength Index
+  rsi:
+    enabled: true
+    period: 14
+    overbought: 70
+    oversold: 30
+    alternative_periods: [9, 21, 25]
+    description: "RSI - measures speed and change of price movements"
+    
+  # MACD (Moving Average Convergence Divergence)
+  macd:
+    enabled: true
+    fast_period: 12
+    slow_period: 26
+    signal_period: 9
+    description: "MACD - trend-following momentum indicator"
+    
+  # Stochastic Oscillator
+  stochastic:
+    enabled: true
+    k_period: 14      # %K period
+    d_period: 3       # %D smoothing period
+    smooth_k: 3       # %K smoothing
+    overbought: 80
+    oversold: 20
+    description: "Stochastic - compares closing price to price range"
+    
+  # Williams %R
+  williams_r:
+    enabled: true
+    period: 14
+    overbought: -20
+    oversold: -80
+    description: "Williams %R - momentum oscillator"
+    
+  # Rate of Change (ROC)
+  roc:
+    enabled: true
+    period: 12
+    description: "Rate of Change - momentum based on price change"
+    
+  # Commodity Channel Index
+  cci:
+    enabled: true
+    period: 20
+    constant: 0.015
+    overbought: 100
+    oversold: -100
+    description: "CCI - identifies cyclical trends"
+    
+  # Money Flow Index
+  mfi:
+    enabled: true
+    period: 14
+    overbought: 80
+    oversold: 20
+    description: "Money Flow Index - volume-weighted RSI"
+    
+  # Ultimate Oscillator
+  ultimate_oscillator:
+    enabled: false
+    period1: 7
+    period2: 14
+    period3: 28
+    weight1: 4
+    weight2: 2
+    weight3: 1
+    description: "Ultimate Oscillator - combines multiple timeframes"
+    
+  # True Strength Index
+  tsi:
+    enabled: false
+    long_period: 25
+    short_period: 13
+    signal_period: 13
+    description: "True Strength Index - double-smoothed momentum"
+
+# -------------------------------
+# Volatility Indicators
+# -------------------------------
+volatility:
+  # Bollinger Bands
+  bollinger_bands:
+    enabled: true
+    period: 20
+    std_dev: 2.0
+    description: "Bollinger Bands - volatility bands around moving average"
+    
+  # Average True Range
+  atr:
+    enabled: true
+    period: 14
+    description: "Average True Range - measures market volatility"
+    
+  # Keltner Channels
+  keltner_channels:
+    enabled: true
+    period: 20
+    multiplier: 2.0
+    ma_type: "ema"  # sma, ema
+    description: "Keltner Channels - volatility-based trading bands"
+    
+  # Donchian Channels
+  donchian_channels:
+    enabled: true
+    period: 20
+    description: "Donchian Channels - highest high and lowest low"
+    
+  # Standard Deviation
+  std_dev:
+    enabled: true
+    period: 20
+    description: "Standard Deviation - statistical volatility measure"
+    
+  # Historical Volatility
+  historical_volatility:
+    enabled: false
+    period: 30
+    annualize: true
+    description: "Historical Volatility - annualized price volatility"
+    
+  # Chaikin Volatility
+  chaikin_volatility:
+    enabled: false
+    period: 14
+    roc_period: 10
+    description: "Chaikin Volatility - based on high-low spread"
+    
+  # GARCH Volatility (Advanced)
+  garch:
+    enabled: false
+    p: 1  # GARCH(p,q) parameters
+    q: 1
+    description: "GARCH volatility model - advanced volatility forecasting"
+
+# -------------------------------
+# Volume Indicators
+# -------------------------------
+volume:
+  # On-Balance Volume
+  obv:
+    enabled: true
+    description: "On-Balance Volume - cumulative volume based on price direction"
+    
+  # Volume Rate of Change
+  volume_roc:
+    enabled: true
+    period: 12
+    description: "Volume Rate of Change - momentum in volume"
+    
+  # Accumulation/Distribution Line
+  ad_line:
+    enabled: true
+    description: "Accumulation/Distribution Line - volume flow indicator"
+    
+  # Chaikin Money Flow
+  cmf:
+    enabled: true
+    period: 20
+    description: "Chaikin Money Flow - measures buying/selling pressure"
+    
+  # Volume Weighted Average Price
+  vwap:
+    enabled: true
+    description: "VWAP - average price weighted by volume"
+    
+  # Price Volume Trend
+  pvt:
+    enabled: true
+    description: "Price Volume Trend - combines price and volume changes"
+    
+  # Negative Volume Index
+  nvi:
+    enabled: false
+    description: "Negative Volume Index - tracks price changes on low volume"
+    
+  # Positive Volume Index
+  pvi:
+    enabled: false
+    description: "Positive Volume Index - tracks price changes on high volume"
+    
+  # Ease of Movement
+  eom:
+    enabled: false
+    period: 14
+    scale: 1000000
+    description: "Ease of Movement - price change per unit volume"
+    
+  # Volume Oscillator
+  volume_oscillator:
+    enabled: false
+    short_period: 14
+    long_period: 28
+    description: "Volume Oscillator - difference between volume MAs"
+
+# -------------------------------
+# Price Action Indicators
+# -------------------------------
+price_action:
+  # Pivot Points
+  pivot_points:
+    enabled: true
+    method: "standard"  # standard, fibonacci, camarilla, woodie
+    description: "Pivot Points - support and resistance levels"
+    
+  # Support and Resistance
+  support_resistance:
+    enabled: true
+    method: "fractal"  # fractal, swing_high_low, clustering
+    lookback_period: 20
+    strength_threshold: 2
+    description: "Dynamic support and resistance levels"
+    
+  # Price Channels
+  price_channels:
+    enabled: true
+    period: 20
+    description: "Price channels based on highest high and lowest low"
+    
+  # Zigzag
+  zigzag:
+    enabled: false
+    threshold: 0.05  # 5% minimum price change
+    description: "Zigzag indicator - filters price noise"
+
+# -------------------------------
+# Candlestick Patterns
+# -------------------------------
+candlestick_patterns:
+  enabled: true
+  
+  # Single candlestick patterns
+  single_patterns:
+    doji: true
+    hammer: true
+    hanging_man: true
+    shooting_star: true
+    inverted_hammer: true
+    
+  # Two-candlestick patterns
+  double_patterns:
+    engulfing: true
+    harami: true
+    piercing_line: true
+    dark_cloud_cover: true
+    
+  # Three-candlestick patterns
+  triple_patterns:
+    morning_star: true
+    evening_star: true
+    three_white_soldiers: true
+    three_black_crows: true
+    
+  # Pattern recognition settings
+  recognition:
+    body_threshold: 0.1  # minimum body size relative to range
+    shadow_threshold: 2.0  # maximum shadow to body ratio
+    equal_threshold: 0.02  # threshold for "equal" prices
+
+# -------------------------------
+# Custom Indicators
+# -------------------------------
+custom:
+  # Custom composite indicators
+  composite_momentum:
+    enabled: true
+    components:
+      - indicator: "rsi"
+        weight: 0.4
+      - indicator: "macd_histogram"
+        weight: 0.3
+      - indicator: "stochastic_k"
+        weight: 0.3
+    description: "Composite momentum combining RSI, MACD, and Stochastic"
+    
+  # Trend Strength Index (custom)
+  trend_strength:
+    enabled: true
+    period: 14
+    ma_types: ["sma", "ema"]
+    description: "Custom trend strength based on multiple MAs"
+    
+  # Volatility Adjusted Momentum
+  vol_adj_momentum:
+    enabled: false
+    momentum_period: 14
+    volatility_period: 20
+    description: "Momentum adjusted for current volatility levels"
+    
+  # Multi-timeframe RSI
+  mtf_rsi:
+    enabled: false
+    timeframes: ["1D", "1W", "1M"]
+    period: 14
+    description: "RSI calculated across multiple timeframes"
+
+# -------------------------------
+# Indicator Combinations
+# -------------------------------
+combinations:
+  # Pre-defined indicator sets for different strategies
+  trend_following:
+    indicators:
+      - "sma_20"
+      - "sma_50"
+      - "ema_12"
+      - "ema_26"
+      - "macd"
+      - "adx"
+    description: "Indicators suitable for trend-following strategies"
+    
+  mean_reversion:
+    indicators:
+      - "rsi"
+      - "bollinger_bands"
+      - "stochastic"
+      - "williams_r"
+    description: "Indicators for mean-reversion strategies"
+    
+  momentum:
+    indicators:
+      - "rsi"
+      - "macd"
+      - "roc"
+      - "stochastic"
+      - "cci"
+    description: "Pure momentum indicators"
+    
+  volatility_breakout:
+    indicators:
+      - "bollinger_bands"
+      - "atr"
+      - "donchian_channels"
+      - "keltner_channels"
+    description: "Indicators for volatility breakout strategies"
+    
+  volume_analysis:
+    indicators:
+      - "obv"
+      - "ad_line"
+      - "cmf"
+      - "vwap"
+      - "volume_roc"
+    description: "Volume-based indicators"
+
+# -------------------------------
+# Calculation Optimization
+# -------------------------------
+optimization:
+  # Parallel processing
+  parallel:
+    enabled: false
+    max_workers: 4
+    chunk_size: 1000
+    
+  # Caching
+  cache:
+    intermediate_results: true
+    cache_duration: 3600  # 1 hour
+    
+  # Memory management
+  memory:
+    use_float32: false  # Use float32 instead of float64 for memory efficiency
+    cleanup_intermediate: true
+    
+  # Vectorization
+  vectorization:
+    use_numpy: true
+    use_pandas_rolling: true
+    avoid_loops: true
+
+# -------------------------------
+# Data Requirements
+# -------------------------------
+data_requirements:
+  # Minimum data points for reliable calculation
+  minimum_periods:
+    sma: 1.0        # multiplier of period
+    ema: 2.0
+    rsi: 2.0
+    macd: 2.0
+    bollinger_bands: 2.0
+    atr: 2.0
+    stochastic: 2.0
+    
+  # Data quality requirements
+  quality:
+    max_missing_ratio: 0.05  # 5% missing data allowed
+    min_trading_days: 20
+    require_volume: true  # for volume-based indicators
+
+# -------------------------------
+# Visualization Settings
+# -------------------------------
+visualization:
+  # Default chart settings for indicators
+  chart_settings:
+    overlay_indicators:    # Indicators that overlay on price chart
+      - "sma"
+      - "ema"
+      - "bollinger_bands"
+      - "keltner_channels"
+      - "parabolic_sar"
+      
+    subplot_indicators:    # Indicators that appear in separate subplots
+      - "rsi"
+      - "macd"
+      - "stochastic"
+      - "volume"
+      - "atr"
+      
+  # Color schemes
+  colors:
+    bullish: "#00ff00"
+    bearish: "#ff0000"
+    neutral: "#ffff00"
+    ma_short: "#ff6b6b"
+    ma_long: "#4ecdc4"
+    
+  # Line styles
+  styles:
+    sma: "solid"
+    ema: "dash"
+    support: "dot"
+    resistance: "dot"
+
+# -------------------------------
+# Alert Conditions
+# -------------------------------
+alerts:
+  # Configurable alert conditions for indicators
+  conditions:
+    rsi_oversold:
+      indicator: "rsi"
+      condition: "below"
+      threshold: 30
+      
+    rsi_overbought:
+      indicator: "rsi"
+      condition: "above" 
+      threshold: 70
+      
+    macd_bullish_crossover:
+      indicator: "macd"
+      condition: "crossover"
+      reference: "signal_line"
+      
+    bollinger_squeeze:
+      indicator: "bollinger_bands"
+      condition: "squeeze"
+      atr_periods: 20
+      squeeze_threshold: 0.1
+      
+    volume_spike:
+      indicator: "volume"
+      condition: "above"
+      threshold: 2.0  # 2x average volume
+      average_period: 20
+
+# -------------------------------
+# Backtesting Integration
+# -------------------------------
+backtesting:
+  # Indicator-based signals for backtesting
+  signal_generation:
+    enabled: true
+    
+    # Signal types
+    signals:
+      ma_crossover:
+        buy: "sma_20 > sma_50"
+        sell: "sma_20 < sma_50"
+        
+      rsi_reversal:
+        buy: "rsi < 30"
+        sell: "rsi > 70"
+        
+      macd_momentum:
+        buy: "macd > signal AND histogram > 0"
+        sell: "macd < signal AND histogram < 0"
+        
+      bollinger_mean_reversion:
+        buy: "close < bb_lower"
+        sell: "close > bb_upper"
+
+# -------------------------------
+# Export Settings
+# -------------------------------
+export:
+  # Data export formats
+  formats: ["csv", "json", "parquet"]
+  
+  # Include metadata in exports
+  include_metadata: true
+  
+  # Precision for exported values
+  decimal_places: 6
+  
+  # Batch export settings
+  batch_size: 10000
+  compression: true

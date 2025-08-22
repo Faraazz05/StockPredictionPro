@@ -1,0 +1,309 @@
+# ============================================
+# StockPredictionPro - .dockerignore
+# Exclude files from Docker build context
+# ============================================
+
+# -------------------------------
+# Git and version control
+# -------------------------------
+.git/
+.gitignore
+.gitattributes
+*.git
+
+# -------------------------------
+# Python cache and compiled files
+# -------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# -------------------------------
+# Virtual environments (exclude from container)
+# -------------------------------
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.conda/
+.virtualenv
+
+# -------------------------------
+# Environment files (keep .env.example, exclude secrets)
+# -------------------------------
+.env
+*.env
+!.env.example
+
+# -------------------------------
+# Data files (exclude large datasets from image)
+# -------------------------------
+data/raw/*.csv
+data/raw/*.parquet
+data/processed/*.parquet
+data/models/*.joblib
+data/models/*.pkl
+data/predictions/*.csv
+data/backtests/*.csv
+data/exports/*
+# Keep structure files
+!data/*/.gitkeep
+!data/*/README.md
+!data/raw/sample_*
+
+# -------------------------------
+# Logs (exclude from image, mount at runtime)
+# -------------------------------
+logs/*.log
+logs/audit/runs/*
+logs/audit/models/*
+!logs/.gitkeep
+!logs/audit/.gitkeep
+
+# -------------------------------
+# Development and testing files
+# -------------------------------
+tests/
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
+htmlcov/
+.tox/
+coverage.xml
+*.cover
+.hypothesis/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.ruff_cache/
+
+# -------------------------------
+# Jupyter notebooks
+# -------------------------------
+notebooks/
+*.ipynb
+.ipynb_checkpoints/
+*-checkpoint.ipynb
+
+# -------------------------------
+# IDE and editor files
+# -------------------------------
+.vscode/
+.idea/
+*.iml
+*.iws
+*.sublime-workspace
+*.sublime-project
+*~
+*.swp
+*.swo
+.vim/
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# -------------------------------
+# Operating system files
+# -------------------------------
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+*.lnk
+*~
+.directory
+.Trash-*
+.nfs*
+
+# -------------------------------
+# Documentation (exclude from runtime image)
+# -------------------------------
+docs/
+*.md
+!README.md
+LICENSE
+CHANGELOG.md
+.github/
+
+# -------------------------------
+# Build artifacts and deployment
+# -------------------------------
+dist/
+build/
+*.exe
+*.app
+*.dmg
+*.pkg
+*.deb
+*.rpm
+*.spec.bak
+
+# -------------------------------
+# Docker files (don't include in context)
+# -------------------------------
+docker-compose*.yml
+.dockerignore.bak
+Dockerfile.dev
+*.dockerfile
+
+# -------------------------------
+# Terraform and infrastructure
+# -------------------------------
+terraform/
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+*.tfvars
+!*.tfvars.example
+deployment/terraform/
+deployment/ansible/
+deployment/kubernetes/
+
+# -------------------------------
+# Cloud and CI/CD
+# -------------------------------
+.github/workflows/
+.gitlab-ci.yml
+.travis.yml
+.circleci/
+
+# -------------------------------
+# Package managers
+# -------------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+pip-log.txt
+pip-delete-this-directory.txt
+
+# -------------------------------
+# Security files
+# -------------------------------
+security/secrets/*
+security/ssl/*
+!security/secrets/.gitkeep
+!security/ssl/.gitkeep
+!security/secrets/.secrets.example
+*.pem
+*.crt
+*.key
+*.p12
+*.pfx
+
+# -------------------------------
+# ML/Data Science artifacts (large files)
+# -------------------------------
+*.h5
+*.hdf5
+*.bin
+*.pth
+*.onnx
+mlruns/
+mlflow.db
+wandb/
+runs/
+tb_logs/
+
+# -------------------------------
+# Backup and temporary files
+# -------------------------------
+*.bak
+*.backup
+*.old
+*.orig
+*.tmp
+*.temp
+temp/
+tmp/
+
+# -------------------------------
+# Archives (exclude large compressed files)
+# -------------------------------
+*.zip
+*.tar.gz
+*.rar
+*.7z
+!assets/*.zip
+
+# -------------------------------
+# Local configuration overrides
+# -------------------------------
+local_settings.py
+local_config.yaml
+*_local.yaml
+*_local.yml
+docker-compose.override.yml
+
+# -------------------------------
+# Performance and profiling
+# -------------------------------
+.prof/
+*.prof
+*.profile
+
+# -------------------------------
+# Streamlit specific
+# -------------------------------
+.streamlit/secrets.toml
+.streamlit/config.toml
+
+# -------------------------------
+# Cache directories
+# -------------------------------
+.cache/
+*.cache
+.sass-cache/
+.jekyll-cache/
+.jekyll-metadata
+.bundle/
+vendor/
+
+# -------------------------------
+# Application specific exclusions
+# -------------------------------
+# Exclude monitoring and deployment configs that shouldn't be in image
+monitoring/
+scripts/deployment/
+scripts/utilities/backup_data.py
+scripts/utilities/performance_profiler.py

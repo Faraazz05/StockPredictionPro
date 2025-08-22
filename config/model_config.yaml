@@ -1,0 +1,777 @@
+# ============================================
+# StockPredictionPro - model_config.yaml
+# Machine Learning models configuration
+# ============================================
+
+# -------------------------------
+# Global Model Settings
+# -------------------------------
+global:
+  # Random seed for reproducibility
+  random_seed: 42
+  
+  # Default validation strategy
+  validation:
+    method: "time_series_split"  # time_series_split, walk_forward, purged_cv
+    n_splits: 5
+    test_size: 0.2
+    validation_size: 0.2
+    
+  # Feature engineering defaults
+  feature_engineering:
+    enable_polynomial_features: true
+    enable_interaction_features: false
+    enable_lag_features: true
+    max_lag_periods: 5
+    feature_selection: true
+    
+  # Performance thresholds
+  performance:
+    min_directional_accuracy: 0.55  # 55% minimum
+    target_directional_accuracy: 0.70  # 70% target
+    max_training_time_minutes: 30
+    
+  # Model persistence
+  persistence:
+    save_models: true
+    model_versioning: true
+    compression: true
+    include_metadata: true
+
+# -------------------------------
+# Regression Models (Price Prediction)
+# -------------------------------
+regression:
+  # Linear Regression (Baseline)
+  linear:
+    enabled: true
+    model_class: "sklearn.linear_model.LinearRegression"
+    
+    # Parameters
+    parameters:
+      fit_intercept: true
+      copy_X: true
+      n_jobs: null
+      positive: false
+      
+    # Hyperparameter optimization
+    hyperparameter_tuning:
+      enabled: false  # Simple baseline, no tuning needed
+      method: "grid_search"
+      
+    # Performance expectations
+    expected_performance:
+      rmse_range: [0.015, 0.025]      # 1.5-2.5%
+      mae_range: [0.01, 0.02]         # 1-2%
+      directional_accuracy: [0.55, 0.65]  # 55-65%
+      
+    # Training configuration
+    training:
+      use_time_features: true
+      normalize_features: false
+      
+    description: "Simple linear regression baseline for trend detection"
+    
+  # Multiple Regression (with indicators)
+  multiple:
+    enabled: true
+    model_class: "sklearn.linear_model.LinearRegression"
+    
+    # Parameters
+    parameters:
+      fit_intercept: true
+      copy_X: true
+      
+    # Feature selection
+    feature_selection:
+      enabled: true
+      method: "select_k_best"  # select_k_best, rfe, lasso_selection
+      k: 15  # Select top 15 features
+      
+    # Hyperparameter optimization
+    hyperparameter_tuning:
+      enabled: true
+      method: "grid_search"
+      cv_folds: 3
+      scoring: "neg_mean_absolute_error"
+      
+    # Performance expectations
+    expected_performance:
+      rmse_range: [0.012, 0.02]
+      mae_range: [0.008, 0.015]
+      directional_accuracy: [0.6, 0.72]
+      
+    description: "Multiple regression with technical indicators"
+    
+  # Polynomial Regression with Regularization
+  polynomial:
+    enabled: true
+    model_class: "sklearn.preprocessing.PolynomialFeatures + sklearn.linear_model.ElasticNet"
+    
+    # Polynomial feature parameters
+    polynomial_features:
+      degrees: [2, 3]  # Will be tuned
+      interaction_only: false
+      include_bias: false
+      
+    # Regularization parameters
+    regularization:
+      alpha_range: [0.001, 0.01, 0.1, 1.0, 10.0]
+      l1_ratio_range: [0.1, 0.3, 0.5, 0.7, 0.9]
+      max_iter: 2000
+      
+    # Hyperparameter optimization
+    hyperparameter_tuning:
+      enabled: true
+      method: "optuna"  # optuna, grid_search, random_search
+      n_trials: 100
+      timeout_minutes: 10
+      
+      # Parameter search space
+      search_space:
+        degree:
+          type: "categorical"
+          choices: [2, 3]
+        alpha:
+          type: "loguniform"
+          low: 0.001
+          high: 10.0
+        l1_ratio:
+          type: "uniform"
+          low: 0.1
+          high: 0.9
+          
+    # Performance expectations
+    expected_performance:
+      rmse_range: [0.008, 0.015]
+      mae_range: [0.006, 0.012]
+      directional_accuracy: [0.65, 0.78]
+      
+    description: "Polynomial features with ElasticNet regularization"
+    
+  # Ridge Regression
+  ridge:
+    enabled: true
+    model_class: "sklearn.linear_model.Ridge"
+    
+    # Parameters
+    parameters:
+      alpha_range: [0.001, 0.01, 0.1, 1.0, 10.0, 100.0]
+      solver: "auto"  # auto, svd, cholesky, lsqr, sparse_cg, sag, saga
+      max_iter: 1000
+      
+    # Hyperparameter optimization
+    hyperparameter_tuning:
+      enabled: true
+      method: "grid_search"
+      cv_folds: 5
+      
+    description: "Ridge regression with L2 regularization"
+    
+  # Lasso Regression
+  lasso:
+    enabled: true
+    model_class: "sklearn.linear_model.Lasso"
+    
+    # Parameters
+    parameters:
+      alpha_range: [0.001, 0.01, 0.1, 1.0, 10.0]
+      max_iter: 2000
+      selection: "cyclic"  # cyclic, random
+      
+    # Hyperparameter optimization
+    hyperparameter_tuning:
+      enabled: true
+      method: "grid_search"
+      
+    description: "Lasso regression with L1 regularization and feature selection"
+    
+  # Support Vector Regression
+  svr:
+    enabled: true
+    model_class: "sklearn.svm.SVR"
+    
+    # Parameters
+    parameters:
+      kernel: "rbf"  # linear, poly, rbf, sigmoid
+      C_range: [0.1, 1.0, 10.0, 100.0]
+      gamma_range: ["scale", "auto", 0.001, 0.01, 0.1, 1.0]
+      epsilon: 0.1
+      
+    # Hyperparameter optimization
+    hyperparameter_tuning:
+      enabled: true
+      method: "optuna"
+      n_trials: 50
+      
+    # Performance expectations
+    expected_performance:
+      rmse_range: [0.01, 0.018]
+      directional_accuracy: [0.62, 0.75]
+      
+    description: "Support Vector Regression for non-linear patterns"
+    
+  # Random Forest Regressor
+  random_forest:
+    enabled: true
+    model_class: "sklearn.ensemble.RandomForestRegressor"
+    
+    # Parameters
+    parameters:
+      n_estimators_range: [50, 100, 200, 300]
+      max_depth_range: [5, 10, 15, 20, null]
+      min_samples_split_range: [2, 5, 10]
+      min_samples_leaf_range: [1, 2, 4]
+      max_features: "sqrt"  # sqrt, log2, auto
+      
+    # Hyperparameter optimization
+    hyperparameter_tuning:
+      enabled: true
+      method: "optuna"
+      n_trials: 75
+      
+    description: "Random Forest for robust non-linear regression"
+    
+  # Gradient Boosting Regressor (Optional)
+  gradient_boosting:
+    enabled: false  # Enable if needed
+    model_class: "sklearn.ensemble.GradientBoostingRegressor"
+    
+    parameters:
+      n_estimators_range: [50, 100, 200]
+      learning_rate_range: [0.01, 0.1, 0.2]
+      max_depth_range: [3, 5, 7]
+      
+    description: "Gradient boosting for sequential learning"
+
+# -------------------------------
+# Classification Models (Direction Prediction)
+# -------------------------------
+classification:
+  # Target configuration
+  targets:
+    # 2-class system (Up/Down)
+    binary:
+      enabled: true
+      classes: ["Down", "Up"]
+      thresholds: [0.0]  # 0% threshold
+      
+    # 3-class system (Up/Sideways/Down)
+    ternary:
+      enabled: true
+      classes: ["Down", "Sideways", "Up"]
+      thresholds: [-0.01, 0.01]  # ±1% thresholds
+      
+    # 5-class system (Strong Down/Down/Sideways/Up/Strong Up)
+    quintuple:
+      enabled: false
+      classes: ["Strong_Down", "Down", "Sideways", "Up", "Strong_Up"]
+      thresholds: [-0.02, -0.005, 0.005, 0.02]  # ±0.5%, ±2% thresholds
+      
+  # Default target system
+  default_target: "ternary"
+  
+  # Logistic Regression
+  logistic:
+    enabled: true
+    model_class: "sklearn.linear_model.LogisticRegression"
+    
+    # Parameters
+    parameters:
+      solver: "liblinear"  # liblinear, lbfgs, newton-cg, sag, saga
+      C_range: [0.01, 0.1, 1.0, 10.0, 100.0]
+      class_weight: "balanced"
+      max_iter: 1000
+      multi_class: "ovr"  # ovr, multinomial, auto
+      
+    # Hyperparameter optimization
+    hyperparameter_tuning:
+      enabled: true
+      method: "grid_search"
+      cv_folds: 5
+      scoring: "f1_weighted"
+      
+    # Performance expectations
+    expected_performance:
+      accuracy_range: [0.58, 0.68]
+      f1_score_range: [0.55, 0.65]
+      precision_range: [0.6, 0.7]
+      
+    description: "Logistic regression for interpretable classification"
+    
+  # Support Vector Machine Classifier
+  svm:
+    enabled: true
+    model_class: "sklearn.svm.SVC"
+    
+    # Parameters
+    parameters:
+      kernel: "rbf"  # linear, poly, rbf, sigmoid
+      C_range: [0.1, 1.0, 10.0, 100.0]
+      gamma_range: ["scale", "auto", 0.001, 0.01, 0.1]
+      class_weight: "balanced"
+      probability: true  # Enable for probability estimates
+      
+    # Hyperparameter optimization
+    hyperparameter_tuning:
+      enabled: true
+      method: "optuna"
+      n_trials: 50
+      
+    # Performance expectations
+    expected_performance:
+      accuracy_range: [0.6, 0.72]
+      f1_score_range: [0.58, 0.7]
+      
+    description: "SVM with RBF kernel for complex decision boundaries"
+    
+  # Random Forest Classifier
+  random_forest:
+    enabled: true
+    model_class: "sklearn.ensemble.RandomForestClassifier"
+    
+    # Parameters
+    parameters:
+      n_estimators_range: [50, 100, 200, 300]
+      max_depth_range: [5, 10, 15, 20]
+      min_samples_split_range: [2, 5, 10]
+      min_samples_leaf_range: [1, 2, 4]
+      class_weight: "balanced"
+      
+    # Feature importance
+    feature_importance:
+      enabled: true
+      plot_top_n: 15
+      
+    # Hyperparameter optimization
+    hyperparameter_tuning:
+      enabled: true
+      method: "optuna"
+      n_trials: 75
+      
+    # Performance expectations
+    expected_performance:
+      accuracy_range: [0.62, 0.75]
+      f1_score_range: [0.6, 0.72]
+      
+    description: "Random Forest for robust classification with feature importance"
+    
+  # Gradient Boosting Classifier
+  gradient_boosting:
+    enabled: false  # Enable if needed
+    model_class: "sklearn.ensemble.GradientBoostingClassifier"
+    
+    parameters:
+      n_estimators_range: [50, 100, 200]
+      learning_rate_range: [0.01, 0.1, 0.2]
+      max_depth_range: [3, 5, 7]
+      
+    description: "Gradient boosting for sequential classification learning"
+    
+  # Extra Trees Classifier
+  extra_trees:
+    enabled: false
+    model_class: "sklearn.ensemble.ExtraTreesClassifier"
+    
+    parameters:
+      n_estimators_range: [50, 100, 200]
+      max_depth_range: [10, 15, 20]
+      
+    description: "Extra randomized trees for variance reduction"
+
+# -------------------------------
+# Ensemble Methods
+# -------------------------------
+ensemble:
+  # Voting Classifier
+  voting:
+    enabled: true
+    
+    # Base models for voting
+    base_models:
+      - "logistic"
+      - "svm" 
+      - "random_forest"
+      
+    # Voting strategy
+    voting_strategy: "soft"  # hard, soft
+    
+    # Weights (optional, equal if not specified)
+    weights: [1, 1, 2]  # Give more weight to Random Forest
+    
+    description: "Voting ensemble combining multiple classifiers"
+    
+  # Stacking Ensemble
+  stacking:
+    enabled: true
+    
+    # Base models (level 0)
+    base_models:
+      regression:
+        - "multiple"
+        - "polynomial" 
+        - "svr"
+      classification:
+        - "logistic"
+        - "svm"
+        - "random_forest"
+        
+    # Meta-learner (level 1)
+    meta_learner:
+      regression: "ridge"
+      classification: "logistic"
+      
+    # Cross-validation for meta-features
+    cv_folds: 5
+    
+    # Performance expectations
+    expected_performance:
+      accuracy_boost: 0.03  # 3% improvement expected
+      
+    description: "Stacking ensemble with meta-learner"
+    
+  # Bagging Ensemble
+  bagging:
+    enabled: false
+    
+    base_estimator: "logistic"
+    n_estimators: 10
+    max_samples: 0.8
+    max_features: 0.8
+    
+    description: "Bagging ensemble for variance reduction"
+
+# -------------------------------
+# Advanced Models (Optional)
+# -------------------------------
+advanced:
+  # XGBoost (if installed)
+  xgboost:
+    enabled: false
+    
+    parameters:
+      n_estimators_range: [100, 200, 300]
+      max_depth_range: [3, 6, 9]
+      learning_rate_range: [0.01, 0.1, 0.3]
+      subsample_range: [0.8, 0.9, 1.0]
+      
+    description: "XGBoost for high-performance gradient boosting"
+    
+  # LightGBM (if installed)
+  lightgbm:
+    enabled: false
+    
+    parameters:
+      n_estimators_range: [100, 200, 300]
+      max_depth_range: [3, 6, 9]
+      learning_rate_range: [0.01, 0.1, 0.3]
+      
+    description: "LightGBM for fast gradient boosting"
+    
+  # Neural Networks (if needed)
+  neural_network:
+    enabled: false
+    
+    parameters:
+      hidden_layer_sizes: [(50,), (100,), (50, 50)]
+      activation: "relu"
+      solver: "adam"
+      
+    description: "Multi-layer perceptron for non-linear patterns"
+
+# -------------------------------
+# Model Selection & Comparison
+# -------------------------------
+model_selection:
+  # Automatic model selection
+  auto_selection:
+    enabled: true
+    
+    # Selection criteria
+    criteria:
+      primary: "directional_accuracy"  # directional_accuracy, rmse, f1_score
+      secondary: "sharpe_ratio"
+      
+    # Minimum performance thresholds
+    thresholds:
+      min_directional_accuracy: 0.6
+      min_sharpe_ratio: 0.5
+      max_training_time_minutes: 15
+      
+  # Model comparison
+  comparison:
+    # Metrics to compare
+    metrics:
+      regression:
+        - "rmse"
+        - "mae"
+        - "mape"
+        - "r2"
+        - "directional_accuracy"
+      classification:
+        - "accuracy"
+        - "precision"
+        - "recall"
+        - "f1_score"
+        - "roc_auc"
+        
+    # Statistical significance testing
+    significance_testing:
+      enabled: true
+      method: "paired_t_test"
+      alpha: 0.05
+      
+  # Model benchmarking
+  benchmarking:
+    # Benchmark models
+    benchmarks:
+      - "buy_and_hold"
+      - "random_prediction"
+      - "moving_average_crossover"
+      
+    # Performance comparison
+    compare_against_benchmarks: true
+
+# -------------------------------
+# Feature Engineering for Models
+# -------------------------------
+feature_engineering:
+  # Lag features
+  lag_features:
+    enabled: true
+    max_lags: 5
+    
+    # Features to lag
+    features_to_lag:
+      - "close"
+      - "volume"
+      - "rsi"
+      - "macd"
+      
+  # Polynomial features
+  polynomial_features:
+    enabled: true
+    max_degree: 3
+    interaction_only: false
+    include_bias: false
+    
+  # Feature scaling
+  scaling:
+    enabled: true
+    method: "robust"  # standard, robust, minmax, quantile
+    
+  # Feature selection
+  feature_selection:
+    enabled: true
+    methods:
+      - "select_k_best"
+      - "rfe"
+      - "lasso_selection"
+      
+    # Selection parameters
+    k_best: 20  # Select top 20 features
+    rfe_n_features: 15
+
+# -------------------------------
+# Training Configuration
+# -------------------------------
+training:
+  # Training parameters
+  parameters:
+    batch_training: false
+    online_learning: false
+    
+  # Early stopping (for applicable models)
+  early_stopping:
+    enabled: true
+    patience: 10
+    min_delta: 0.001
+    
+  # Cross-validation
+  cross_validation:
+    method: "time_series_split"
+    n_splits: 5
+    shuffle: false  # Never shuffle time series data
+    
+  # Hyperparameter optimization
+  hyperparameter_optimization:
+    global_method: "optuna"  # optuna, grid_search, random_search
+    global_n_trials: 100
+    global_timeout_minutes: 30
+    
+    # Optuna-specific settings
+    optuna:
+      sampler: "TPESampler"  # TPESampler, RandomSampler, CmaEsSampler
+      pruner: "MedianPruner"  # MedianPruner, SuccessiveHalvingPruner
+      
+  # Parallel training
+  parallel:
+    enabled: false
+    n_jobs: -1
+    backend: "threading"  # threading, multiprocessing
+
+# -------------------------------
+# Model Evaluation
+# -------------------------------
+evaluation:
+  # Evaluation metrics
+  metrics:
+    regression:
+      primary: ["rmse", "mae", "directional_accuracy"]
+      secondary: ["mape", "r2", "explained_variance"]
+      
+    classification:
+      primary: ["accuracy", "f1_score", "precision", "recall"]
+      secondary: ["roc_auc", "log_loss", "matthews_corrcoef"]
+      
+  # Financial metrics
+  financial_metrics:
+    enabled: true
+    metrics:
+      - "sharpe_ratio"
+      - "sortino_ratio"
+      - "max_drawdown"
+      - "calmar_ratio"
+      - "hit_rate"
+      
+  # Walk-forward analysis
+  walk_forward:
+    enabled: true
+    window_size: 252  # 1 year
+    step_size: 21     # 1 month
+    
+  # Out-of-sample testing
+  out_of_sample:
+    enabled: true
+    test_size: 0.2
+    validation_size: 0.2
+
+# -------------------------------
+# Model Persistence & Versioning
+# -------------------------------
+persistence:
+  # Model saving
+  save_models: true
+  save_path: "data/models"
+  
+  # Compression
+  compression:
+    enabled: true
+    method: "joblib"  # joblib, pickle, cloudpickle
+    
+  # Versioning
+  versioning:
+    enabled: true
+    version_format: "YYYYMMDD_HHMMSS"
+    keep_n_versions: 5
+    
+  # Metadata
+  metadata:
+    include_training_data_hash: true
+    include_feature_names: true
+    include_performance_metrics: true
+    include_hyperparameters: true
+    include_git_commit: true
+
+# -------------------------------
+# Model Monitoring & Drift Detection
+# -------------------------------
+monitoring:
+  # Performance monitoring
+  performance:
+    enabled: true
+    
+    # Monitoring metrics
+    metrics_to_monitor:
+      - "directional_accuracy"
+      - "sharpe_ratio"
+      - "max_drawdown"
+      
+    # Alert thresholds
+    alert_thresholds:
+      accuracy_drop: 0.05  # 5% drop in accuracy
+      sharpe_degradation: 0.2
+      
+  # Data drift detection
+  drift_detection:
+    enabled: true
+    
+    # Drift detection methods
+    methods:
+      - "ks_test"  # Kolmogorov-Smirnov test
+      - "psi"      # Population Stability Index
+      
+    # Alert thresholds
+    thresholds:
+      ks_test_p_value: 0.05
+      psi_threshold: 0.2
+      
+  # Concept drift detection
+  concept_drift:
+    enabled: true
+    window_size: 100
+    sensitivity: 0.05
+
+# -------------------------------
+# Retraining Strategy
+# -------------------------------
+retraining:
+  # Automatic retraining
+  automatic:
+    enabled: false
+    
+    # Triggers for retraining
+    triggers:
+      - "performance_degradation"
+      - "data_drift_detected"
+      - "scheduled_time"
+      
+    # Retraining frequency
+    frequency: "weekly"  # daily, weekly, monthly
+    
+  # Retraining parameters
+  parameters:
+    retrain_from_scratch: true
+    incremental_learning: false
+    
+    # Data window for retraining
+    data_window_months: 24  # 2 years
+    
+# -------------------------------
+# Production Deployment
+# -------------------------------
+deployment:
+  # Model serving
+  serving:
+    batch_size: 100
+    timeout_seconds: 30
+    
+  # A/B testing
+  ab_testing:
+    enabled: false
+    traffic_split: 0.5  # 50/50 split
+    
+  # Canary deployment
+  canary:
+    enabled: false
+    initial_traffic: 0.1  # 10% initially
+    
+# -------------------------------
+# Experimental Features
+# -------------------------------
+experimental:
+  # AutoML integration
+  automl:
+    enabled: false
+    
+  # Transfer learning
+  transfer_learning:
+    enabled: false
+    
+  # Multi-task learning
+  multi_task:
+    enabled: false
+    
+  # Online learning
+  online_learning:
+    enabled: false

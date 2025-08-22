@@ -1,0 +1,582 @@
+# ============================================
+# StockPredictionPro - logging.yaml
+# Comprehensive logging configuration
+# ============================================
+
+# -------------------------------
+# Logging Version and Disable Existing
+# -------------------------------
+version: 1
+disable_existing_loggers: false
+incremental: false
+
+# -------------------------------
+# Log Message Formatters
+# -------------------------------
+formatters:
+  # Simple console formatter
+  simple:
+    format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    datefmt: "%Y-%m-%d %H:%M:%S"
+    
+  # Detailed formatter for file logs
+  detailed:
+    format: "%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(funcName)s - %(message)s"
+    datefmt: "%Y-%m-%d %H:%M:%S.%f"
+    
+  # JSON structured formatter for production
+  json:
+    format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    class: pythonjsonlogger.jsonlogger.JsonFormatter
+    datefmt: "%Y-%m-%dT%H:%M:%S.%fZ"
+    
+  # Error-specific formatter with stack trace
+  error:
+    format: |
+      %(asctime)s - %(name)s - %(levelname)s
+      File: %(filename)s:%(lineno)d in %(funcName)s
+      Message: %(message)s
+      %(exc_info)s
+    datefmt: "%Y-%m-%d %H:%M:%S"
+    
+  # Performance formatter for timing logs
+  performance:
+    format: "%(asctime)s - PERF - %(name)s - %(message)s - Duration: %(duration).3fs"
+    datefmt: "%Y-%m-%d %H:%M:%S"
+    
+  # Audit formatter for governance logs
+  audit:
+    format: "%(asctime)s - AUDIT - User: %(user)s - Action: %(action)s - Resource: %(resource)s - Details: %(message)s"
+    datefmt: "%Y-%m-%d %H:%M:%S"
+    
+  # Trading-specific formatter
+  trading:
+    format: "%(asctime)s - TRADE - Symbol: %(symbol)s - Signal: %(signal)s - Price: %(price)s - %(message)s"
+    datefmt: "%Y-%m-%d %H:%M:%S"
+
+# -------------------------------
+# Log Handlers
+# -------------------------------
+handlers:
+  # Console handler for development
+  console:
+    class: logging.StreamHandler
+    level: INFO
+    formatter: simple
+    stream: ext://sys.stdout
+    
+  # Console handler for errors (stderr)
+  console_error:
+    class: logging.StreamHandler
+    level: ERROR
+    formatter: error
+    stream: ext://sys.stderr
+    
+  # Main application log file
+  app_file:
+    class: logging.handlers.RotatingFileHandler
+    level: DEBUG
+    formatter: detailed
+    filename: logs/app.log
+    maxBytes: 10485760  # 10MB
+    backupCount: 5
+    encoding: utf-8
+    delay: true
+    
+  # Error-only log file
+  error_file:
+    class: logging.handlers.RotatingFileHandler
+    level: ERROR
+    formatter: error
+    filename: logs/error.log
+    maxBytes: 10485760  # 10MB
+    backupCount: 10
+    encoding: utf-8
+    delay: true
+    
+  # API-specific log file
+  api_file:
+    class: logging.handlers.TimedRotatingFileHandler
+    level: INFO
+    formatter: json
+    filename: logs/api.log
+    when: midnight
+    interval: 1
+    backupCount: 30
+    encoding: utf-8
+    delay: true
+    
+  # Trading operations log
+  trading_file:
+    class: logging.handlers.TimedRotatingFileHandler
+    level: INFO
+    formatter: trading
+    filename: logs/trading.log
+    when: midnight
+    interval: 1
+    backupCount: 365  # Keep 1 year of trading logs
+    encoding: utf-8
+    delay: true
+    
+  # Performance monitoring log
+  performance_file:
+    class: logging.handlers.RotatingFileHandler
+    level: INFO
+    formatter: performance
+    filename: logs/performance.log
+    maxBytes: 5242880  # 5MB
+    backupCount: 3
+    encoding: utf-8
+    delay: true
+    
+  # Audit trail log (for governance)
+  audit_file:
+    class: logging.handlers.TimedRotatingFileHandler
+    level: INFO
+    formatter: audit
+    filename: logs/audit/audit.log
+    when: midnight
+    interval: 1
+    backupCount: 2555  # Keep 7 years for compliance
+    encoding: utf-8
+    delay: true
+    
+  # Data processing log
+  data_file:
+    class: logging.handlers.RotatingFileHandler
+    level: DEBUG
+    formatter: detailed
+    filename: logs/data.log
+    maxBytes: 10485760  # 10MB
+    backupCount: 3
+    encoding: utf-8
+    delay: true
+    
+  # Model training and inference log
+  models_file:
+    class: logging.handlers.RotatingFileHandler
+    level: INFO
+    formatter: detailed
+    filename: logs/models.log
+    maxBytes: 10485760  # 10MB
+    backupCount: 5
+    encoding: utf-8
+    delay: true
+    
+  # Security events log
+  security_file:
+    class: logging.handlers.TimedRotatingFileHandler
+    level: WARNING
+    formatter: detailed
+    filename: logs/security.log
+    when: midnight
+    interval: 1
+    backupCount: 365
+    encoding: utf-8
+    delay: true
+    
+  # Memory handler for buffering critical logs
+  memory_handler:
+    class: logging.handlers.MemoryHandler
+    level: ERROR
+    capacity: 100
+    flushLevel: ERROR
+    target: error_file
+    
+  # Syslog handler for production deployment
+  syslog:
+    class: logging.handlers.SysLogHandler
+    level: WARNING
+    formatter: json
+    address: ['localhost', 514]
+    facility: local0
+    
+  # Email handler for critical errors (production)
+  email:
+    class: logging.handlers.SMTPHandler
+    level: CRITICAL
+    formatter: error
+    mailhost: localhost
+    fromaddr: "alerts@stockpred.com"
+    toaddrs: ["admin@stockpred.com"]
+    subject: "StockPredPro Critical Error"
+    credentials: null
+    secure: null
+
+# -------------------------------
+# Loggers Configuration
+# -------------------------------
+loggers:
+  # Root logger (catches all)
+  "":
+    level: INFO
+    handlers: [console, app_file, error_file]
+    propagate: false
+    
+  # Application-specific loggers
+  stockpred:
+    level: INFO
+    handlers: [console, app_file]
+    propagate: false
+    
+  # Data processing logger
+  stockpred.data:
+    level: INFO
+    handlers: [console, data_file, error_file]
+    propagate: false
+    qualname: stockpred.data
+    
+  # Data fetchers (more verbose for debugging)
+  stockpred.data.fetchers:
+    level: DEBUG
+    handlers: [data_file]
+    propagate: true
+    
+  # Features and indicators
+  stockpred.features:
+    level: INFO
+    handlers: [console, app_file]
+    propagate: false
+    
+  # Model training and inference
+  stockpred.models:
+    level: INFO
+    handlers: [console, models_file, error_file]
+    propagate: false
+    
+  # Trading and signals
+  stockpred.trading:
+    level: INFO
+    handlers: [console, trading_file, error_file]
+    propagate: false
+    
+  # API logger
+  stockpred.api:
+    level: INFO
+    handlers: [api_file, error_file]
+    propagate: false
+    
+  # UI/Streamlit logger
+  streamlit:
+    level: WARNING
+    handlers: [console, app_file]
+    propagate: false
+    
+  # Performance monitoring
+  performance:
+    level: INFO
+    handlers: [performance_file]
+    propagate: false
+    
+  # Audit logger for governance
+  audit:
+    level: INFO
+    handlers: [audit_file]
+    propagate: false
+    
+  # Security logger
+  security:
+    level: WARNING
+    handlers: [security_file, console_error]
+    propagate: false
+    
+  # Third-party library loggers (reduce noise)
+  urllib3:
+    level: WARNING
+    handlers: [app_file]
+    propagate: false
+    
+  requests:
+    level: WARNING
+    handlers: [app_file] 
+    propagate: false
+    
+  matplotlib:
+    level: ERROR
+    handlers: [error_file]
+    propagate: false
+    
+  plotly:
+    level: WARNING
+    handlers: [app_file]
+    propagate: false
+    
+  yfinance:
+    level: INFO
+    handlers: [data_file]
+    propagate: false
+    
+  scikit-learn:
+    level: WARNING
+    handlers: [models_file]
+    propagate: false
+    
+  sklearn:
+    level: WARNING
+    handlers: [models_file]
+    propagate: false
+    
+  pandas:
+    level: WARNING
+    handlers: [app_file]
+    propagate: false
+    
+  numpy:
+    level: WARNING
+    handlers: [app_file]
+    propagate: false
+
+# -------------------------------
+# Filters (Custom Log Filtering)
+# -------------------------------
+filters:
+  # Environment-based filter
+  development_filter:
+    class: logging_config.EnvironmentFilter
+    environment: development
+    
+  # Performance threshold filter
+  slow_operation_filter:
+    class: logging_config.SlowOperationFilter
+    threshold_seconds: 1.0
+    
+  # Security event filter
+  security_filter:
+    class: logging_config.SecurityEventFilter
+    sensitive_patterns:
+      - "password"
+      - "api_key"
+      - "token"
+      - "secret"
+    
+  # Rate limiting filter
+  rate_limit_filter:
+    class: logging_config.RateLimitFilter
+    max_messages_per_minute: 60
+
+# -------------------------------
+# Custom Configuration Classes
+# -------------------------------
+# Note: These would be implemented in a separate logging_config.py file
+
+custom_classes:
+  EnvironmentFilter:
+    description: "Filter logs based on environment (dev/prod/test)"
+    
+  SlowOperationFilter:
+    description: "Filter to only log operations exceeding time threshold"
+    
+  SecurityEventFilter:
+    description: "Filter and mask sensitive security-related logs"
+    
+  RateLimitFilter:
+    description: "Prevent log flooding by rate limiting similar messages"
+    
+  ContextualFormatter:
+    description: "Add request/user context to log messages"
+
+# -------------------------------
+# Environment-Specific Overrides
+# -------------------------------
+environments:
+  development:
+    root_level: DEBUG
+    console_level: DEBUG
+    file_rotation: false
+    enable_performance_logs: true
+    
+  production:
+    root_level: WARNING
+    console_level: ERROR
+    enable_syslog: true
+    enable_email_alerts: true
+    mask_sensitive_data: true
+    
+  testing:
+    root_level: ERROR
+    console_level: CRITICAL
+    disable_file_logging: true
+
+# -------------------------------
+# Structured Logging Configuration
+# -------------------------------
+structured_logging:
+  enabled: false  # Enable for production
+  
+  # Standard fields to include
+  standard_fields:
+    - timestamp
+    - level
+    - logger_name
+    - message
+    - module
+    - function
+    - line_number
+    
+  # Custom fields for financial applications
+  custom_fields:
+    - symbol
+    - user_id
+    - session_id
+    - request_id
+    - model_version
+    - performance_metrics
+    
+  # Field formatting
+  formatting:
+    timestamp_format: "iso"
+    include_stack_trace: false
+    flatten_nested_objects: true
+
+# -------------------------------
+# Log Aggregation & Monitoring
+# -------------------------------
+aggregation:
+  # ELK Stack integration (if available)
+  elasticsearch:
+    enabled: false
+    host: "localhost"
+    port: 9200
+    index_pattern: "stockpred-logs-%Y.%m.%d"
+    
+  # Fluentd integration
+  fluentd:
+    enabled: false
+    host: "localhost"
+    port: 24224
+    tag: "stockpred"
+    
+  # Centralized logging
+  centralized:
+    enabled: false
+    endpoint: ""
+    api_key: ""
+
+# -------------------------------
+# Log Analysis & Alerting
+# -------------------------------
+analysis:
+  # Error pattern detection
+  error_patterns:
+    - pattern: "OutOfMemoryError"
+      severity: critical
+      action: "restart_application"
+      
+    - pattern: "ConnectionError"
+      severity: warning
+      action: "retry_operation"
+      
+    - pattern: "AuthenticationError"
+      severity: high
+      action: "security_review"
+    
+  # Performance monitoring
+  performance_monitoring:
+    slow_query_threshold: 5.0  # seconds
+    memory_usage_threshold: 0.8  # 80%
+    cpu_usage_threshold: 0.9     # 90%
+    
+  # Alerting thresholds
+  alerts:
+    error_rate_threshold: 0.05   # 5% error rate
+    response_time_threshold: 2.0  # 2 seconds
+    log_volume_threshold: 10000  # messages per hour
+
+# -------------------------------
+# Compliance & Retention
+# -------------------------------
+compliance:
+  # Data retention policies
+  retention:
+    audit_logs: 2555      # 7 years (financial compliance)
+    error_logs: 365       # 1 year
+    performance_logs: 90  # 3 months
+    debug_logs: 30        # 1 month
+    
+  # Privacy controls
+  privacy:
+    anonymize_user_data: true
+    mask_financial_data: true
+    exclude_personal_info: true
+    
+  # Audit requirements
+  audit_requirements:
+    log_integrity_check: true
+    tamper_detection: true
+    access_logging: true
+
+# -------------------------------
+# Backup & Archival
+# -------------------------------
+backup:
+  enabled: true
+  
+  # Backup schedule
+  schedule:
+    frequency: "daily"
+    time: "02:00"
+    
+  # Backup storage
+  storage:
+    local_path: "logs/backups"
+    compression: true
+    encryption: false
+    
+  # Archival rules
+  archival:
+    archive_after_days: 90
+    delete_after_days: 2555
+    
+# -------------------------------
+# Debugging & Troubleshooting
+# -------------------------------
+debugging:
+  # Debug mode settings
+  debug_mode:
+    enabled: false
+    verbose_third_party: false
+    log_sql_queries: false
+    log_http_requests: true
+    
+  # Trace logging
+  tracing:
+    enabled: false
+    trace_requests: false
+    trace_database: false
+    trace_external_apis: true
+    
+  # Memory debugging
+  memory_debugging:
+    enabled: false
+    log_memory_usage: false
+    detect_memory_leaks: false
+
+# -------------------------------
+# Integration Settings
+# -------------------------------
+integrations:
+  # Sentry error tracking
+  sentry:
+    enabled: false
+    dsn: "${SENTRY_DSN:}"
+    environment: "${ENVIRONMENT:development}"
+    sample_rate: 1.0
+    
+  # DataDog logging
+  datadog:
+    enabled: false
+    api_key: "${DATADOG_API_KEY:}"
+    service_name: "stockpredictionpro"
+    
+  # New Relic logging
+  newrelic:
+    enabled: false
+    license_key: "${NEWRELIC_LICENSE_KEY:}"
+    
+  # Custom webhook notifications
+  webhooks:
+    enabled: false
+    endpoints:
+      critical_errors: ""
+      performance_alerts: ""
+      security_events: ""

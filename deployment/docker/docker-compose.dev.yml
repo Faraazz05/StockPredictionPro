@@ -1,0 +1,319 @@
+# ============================================
+# StockPredictionPro - docker-compose.dev.yml
+# Complete development stack with API, Database, Cache, and Reverse Proxy
+# ============================================
+
+version: '3.8'
+
+# Define all services for development environment
+services:
+  
+  # ============================================
+  # FastAPI Application Service
+  # ============================================
+  api:
+    build:
+      context: ../../  # Build from project root
+      dockerfile: deployment/docker/Dockerfile.dev
+    container_name: stockpred_api_dev
+    restart: unless-stopped
+    ports:
+      - "8000:8000"  # API port
+      - "5678:5678"  # Debugging port (VS Code, PyCharm)
+      - "8888:8888"  # Jupyter notebook port
+    volumes:
+      # Mount source code for hot reload
+      - ../../:/app:rw
+      # Mount logs directory
+      - ./logs:/app/logs:rw
+      # Mount models directory for ML models
+      - ./data/models:/app/models:rw
+      # Mount downloads directory
+      - ./data/downloads:/app/downloads:rw
+    environment:
+      # Development environment variables
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - LOG_LEVEL=debug
+      - PYTHONPATH=/app:/app/src
+      
+      # Database configuration
+      - DATABASE_URL=postgresql://stockpred_user:stockpred_pass123@db:5432/stockpredpro_dev
+      - DATABASE_HOST=db
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=stockpredpro_dev
+      - DATABASE_USER=stockpred_user
+      - DATABASE_PASSWORD=stockpred_pass123
+      
+      # Redis configuration
+      - REDIS_URL=redis://redis:6379/0
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      
+      # Security (development only - change in production)
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - JWT_SECRET_KEY=dev-jwt-secret-change-in-production
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+      
+      # API Configuration
+      - API_V1_STR=/api/v1
+      - PROJECT_NAME=StockPredictionPro
+      - VERSION=2.0.0-dev
+      - ALLOWED_HOSTS=*
+      
+      # External API keys (set in .env.dev file)
+      - ALPHA_VANTAGE_API_KEY=${ALPHA_VANTAGE_API_KEY:-demo}
+      - YAHOO_FINANCE_API_KEY=${YAHOO_FINANCE_API_KEY:-}
+      - FRED_API_KEY=${FRED_API_KEY:-}
+      
+      # Performance settings
+      - WORKERS=1
+      - MAX_CONNECTIONS=100
+      - KEEPALIVE=2
+      
+    depends_on:
+      - db
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - stockpred_network
+    command: >
+      uvicorn src.api.main:app
+      --host 0.0.0.0
+      --port 8000
+      --reload
+      --reload-dir /app/src
+      --log-level debug
+      --access-log
+      --use-colors
+
+  # ============================================
+  # PostgreSQL Database Service
+  # ============================================
+  db:
+    image: postgres:15-alpine
+    container_name: stockpred_db_dev
+    restart: unless-stopped
+    ports:
+      - "5432:5432"  # Expose for external database tools
+    environment:
+      # Database configuration
+      - POSTGRES_DB=stockpredpro_dev
+      - POSTGRES_USER=stockpred_user
+      - POSTGRES_PASSWORD=stockpred_pass123
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+      
+      # Performance tuning for development
+      - POSTGRES_SHARED_BUFFERS=256MB
+      - POSTGRES_EFFECTIVE_CACHE_SIZE=1GB
+      - POSTGRES_MAINTENANCE_WORK_MEM=64MB
+      - POSTGRES_CHECKPOINT_COMPLETION_TARGET=0.9
+      - POSTGRES_WAL_BUFFERS=16MB
+      - POSTGRES_DEFAULT_STATISTICS_TARGET=100
+      
+    volumes:
+      # Persistent database storage
+      - postgres_data:/var/lib/postgresql/data
+      # Custom PostgreSQL configuration
+      - ./config/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      # Initialization scripts
+      - ./init-scripts:/docker-entrypoint-initdb.d:ro
+      # Database backups directory
+      - ./backups:/backups:rw
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stockpred_user -d stockpredpro_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - stockpred_network
+
+  # ============================================
+  # Redis Cache Service
+  # ============================================
+  redis:
+    image: redis:7-alpine
+    container_name: stockpred_redis_dev
+    restart: unless-stopped
+    ports:
+      - "6379:6379"  # Expose for external Redis tools
+    volumes:
+      # Persistent Redis storage
+      - redis_data:/data
+      # Custom Redis configuration
+      - ./config/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    command: redis-server /usr/local/etc/redis/redis.conf
+    environment:
+      # Redis configuration
+      - REDIS_PASSWORD=redis_dev_password_123
+      - REDIS_MAXMEMORY=512mb
+      - REDIS_MAXMEMORY_POLICY=allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - stockpred_network
+
+  # ============================================
+  # Nginx Reverse Proxy Service
+  # ============================================
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: stockpred_nginx_dev
+    restart: unless-stopped
+    ports:
+      - "80:80"   # HTTP
+      - "443:443" # HTTPS (with self-signed cert for dev)
+    volumes:
+      # Custom Nginx configuration
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      # SSL certificates for development
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      # Static files (if any)
+      - ./nginx/static:/var/www/static:ro
+      # Nginx logs
+      - ./logs/nginx:/var/log/nginx:rw
+    depends_on:
+      - api
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - stockpred_network
+
+  # ============================================
+  # pgAdmin - Database Management Interface
+  # ============================================
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: stockpred_pgadmin_dev
+    restart: unless-stopped
+    ports:
+      - "5050:80"  # pgAdmin web interface
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@stockpredpro.local
+      - PGADMIN_DEFAULT_PASSWORD=pgadmin123
+      - PGADMIN_CONFIG_SERVER_MODE=False
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      # Pre-configured server connections
+      - ./config/pgadmin/servers.json:/pgadmin4/servers.json:ro
+    depends_on:
+      - db
+    networks:
+      - stockpred_network
+
+  # ============================================
+  # Redis Commander - Redis Management Interface
+  # ============================================
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: stockpred_redis_commander_dev
+    restart: unless-stopped
+    ports:
+      - "8081:8081"  # Redis Commander web interface
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=redis_dev_password_123
+    depends_on:
+      - redis
+    networks:
+      - stockpred_network
+
+  # ============================================
+  # Mailhog - Email Testing Service
+  # ============================================
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: stockpred_mailhog_dev
+    restart: unless-stopped
+    ports:
+      - "1025:1025"  # SMTP server
+      - "8025:8025"  # Web interface
+    networks:
+      - stockpred_network
+
+# ============================================
+# Named Volumes for Persistent Data
+# ============================================
+volumes:
+  # PostgreSQL data persistence
+  postgres_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/postgres
+      
+  # Redis data persistence  
+  redis_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/redis
+      
+  # pgAdmin configuration persistence
+  pgadmin_data:
+    driver: local
+
+# ============================================
+# Custom Network for Service Communication
+# ============================================
+networks:
+  stockpred_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# ============================================
+# Development Usage Instructions
+# ============================================
+
+# To start the development environment:
+# docker-compose -f docker-compose.dev.yml up --build -d
+
+# To view logs:
+# docker-compose -f docker-compose.dev.yml logs -f api
+
+# To access services:
+# API: http://localhost:8000
+# API Docs: http://localhost:8000/docs  
+# Nginx: http://localhost
+# pgAdmin: http://localhost:5050
+# Redis Commander: http://localhost:8081
+# Mailhog: http://localhost:8025
+# Jupyter: http://localhost:8888
+
+# To run database migrations:
+# docker-compose -f docker-compose.dev.yml exec api alembic upgrade head
+
+# To access API container shell:
+# docker-compose -f docker-compose.dev.yml exec api /bin/bash
+
+# To run tests:
+# docker-compose -f docker-compose.dev.yml exec api pytest
+
+# To stop all services:
+# docker-compose -f docker-compose.dev.yml down
+
+# To stop and remove volumes:
+# docker-compose -f docker-compose.dev.yml down -v
+
+# Environment file (.env.dev) should contain:
+# ALPHA_VANTAGE_API_KEY=your_key_here
+# YAHOO_FINANCE_API_KEY=your_key_here  
+# FRED_API_KEY=your_key_here

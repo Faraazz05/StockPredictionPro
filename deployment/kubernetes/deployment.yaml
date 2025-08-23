@@ -1,0 +1,838 @@
+# ============================================
+# StockPredictionPro - deployment.yaml
+# Production-ready Kubernetes deployments with high availability, security, and auto-scaling
+# ============================================
+
+# ============================================
+# FastAPI Application Deployment
+# ============================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stockpredpro-api
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/instance: production
+    app.kubernetes.io/version: "2.0.0"
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: stockpredpro-platform
+    app.kubernetes.io/managed-by: kubectl
+    tier: application
+    environment: production
+  annotations:
+    kubernetes.io/description: "StockPredictionPro FastAPI application deployment"
+    deployment.kubernetes.io/revision: "1"
+    configmap.reloader.stakater.com/reload: "stockpredpro-config,stockpredpro-external-config"
+    secret.reloader.stakater.com/reload: "stockpredpro-secrets"
+spec:
+  # Scaling configuration
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1        # Max pods unavailable during update
+      maxSurge: 1             # Max additional pods during update
+  
+  # Pod selection
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: stockpredpro
+      app.kubernetes.io/component: api
+      tier: application
+  
+  # Pod template
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: stockpredpro
+        app.kubernetes.io/instance: production
+        app.kubernetes.io/version: "2.0.0"
+        app.kubernetes.io/component: api
+        app.kubernetes.io/part-of: stockpredpro-platform
+        tier: application
+        environment: production
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8001"
+        prometheus.io/path: "/metrics"
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+    
+    spec:
+      # Security configuration
+      serviceAccountName: stockpredpro-service-account
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      
+      # Scheduling configuration
+      priorityClassName: stockpredpro-high
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      
+      # Node selection and affinity
+      nodeSelector:
+        kubernetes.io/os: linux
+        node-type: application
+      
+      affinity:
+        # Prefer spreading pods across nodes
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app.kubernetes.io/component
+                  operator: In
+                  values: ["api"]
+              topologyKey: kubernetes.io/hostname
+          
+          # Require spreading across zones for high availability
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values: ["api"]
+            topologyKey: topology.kubernetes.io/zone
+        
+        # Prefer nodes with SSD storage
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 50
+            preference:
+              matchExpressions:
+              - key: storage-type
+                operator: In
+                values: ["ssd"]
+      
+      # Tolerations for dedicated nodes
+      tolerations:
+      - key: "app"
+        operator: "Equal"
+        value: "stockpredpro"
+        effect: "NoSchedule"
+      
+      # Image pull configuration
+      imagePullSecrets:
+      - name: stockpredpro-registry-secret
+      
+      # Init containers
+      initContainers:
+      # Database migration
+      - name: db-migrations
+        image: stockpredpro/api:2.0.0
+        imagePullPolicy: IfNotPresent
+        command: ["alembic", "upgrade", "head"]
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: stockpredpro-secrets
+              key: database-url
+        envFrom:
+        - configMapRef:
+            name: stockpredpro-config
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: ["ALL"]
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        volumeMounts:
+        - name: tmp-volume
+          mountPath: /tmp
+      
+      # Wait for database
+      - name: wait-for-db
+        image: busybox:1.35
+        command: ['sh', '-c', 'until nc -z ${DATABASE_HOST} ${DATABASE_PORT}; do echo "Waiting for database..."; sleep 2; done']
+        envFrom:
+        - configMapRef:
+            name: stockpredpro-config
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: ["ALL"]
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            cpu: 100m
+            memory: 32Mi
+      
+      # Main application containers
+      containers:
+      # FastAPI application
+      - name: api
+        image: stockpredpro/api:2.0.0
+        imagePullPolicy: IfNotPresent
+        
+        # Ports
+        ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+        - name: metrics
+          containerPort: 8001
+          protocol: TCP
+        
+        # Environment variables from ConfigMaps and Secrets
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: stockpredpro-secrets
+              key: database-url
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: stockpredpro-secrets
+              key: redis-url
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: stockpredpro-secrets
+              key: secret-key
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: stockpredpro-secrets
+              key: jwt-secret-key
+        - name: ALPHA_VANTAGE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: stockpredpro-external-secrets
+              key: alpha-vantage-api-key
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        
+        envFrom:
+        - configMapRef:
+            name: stockpredpro-config
+        - configMapRef:
+            name: stockpredpro-external-config
+        
+        # Resource requirements
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+            ephemeral-storage: 1Gi
+          limits:
+            cpu: 2000m
+            memory: 4Gi
+            ephemeral-storage: 2Gi
+        
+        # Security context
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: ["ALL"]
+        
+        # Health checks
+        startupProbe:
+          httpGet:
+            path: /health/ping
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 30
+        
+        livenessProbe:
+          httpGet:
+            path: /health/ping
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          successThreshold: 1
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /health/readiness
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        
+        # Volume mounts
+        volumeMounts:
+        - name: tmp-volume
+          mountPath: /tmp
+        - name: models-storage
+          mountPath: /app/models
+        - name: downloads-storage
+          mountPath: /app/downloads
+        - name: logs-volume
+          mountPath: /app/logs
+        - name: config-volume
+          mountPath: /app/config/logging.conf
+          subPath: logging.conf
+          readOnly: true
+        
+        # Lifecycle hooks
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/bin/sh", "-c", "sleep 15"]
+      
+      # Sidecar container for log shipping (optional)
+      - name: log-shipper
+        image: fluent/fluent-bit:2.0
+        imagePullPolicy: IfNotPresent
+        
+        env:
+        - name: FLUENT_CONF
+          value: fluent-bit.conf
+        
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+        
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: ["ALL"]
+        
+        volumeMounts:
+        - name: logs-volume
+          mountPath: /app/logs
+          readOnly: true
+        - name: fluent-bit-config
+          mountPath: /fluent-bit/etc
+          readOnly: true
+      
+      # Volumes
+      volumes:
+      - name: tmp-volume
+        emptyDir:
+          sizeLimit: 1Gi
+      - name: logs-volume
+        emptyDir:
+          sizeLimit: 2Gi
+      - name: config-volume
+        configMap:
+          name: stockpredpro-logging-config
+          defaultMode: 0644
+      - name: fluent-bit-config
+        configMap:
+          name: fluent-bit-config
+          defaultMode: 0644
+      - name: models-storage
+        persistentVolumeClaim:
+          claimName: stockpredpro-models-pvc
+      - name: downloads-storage
+        persistentVolumeClaim:
+          claimName: stockpredpro-downloads-pvc
+
+---
+# ============================================
+# PostgreSQL Database Deployment
+# ============================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stockpredpro-postgres
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/instance: production
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: stockpredpro-platform
+    tier: database
+    environment: production
+spec:
+  replicas: 1  # Databases are typically single instance
+  strategy:
+    type: Recreate  # Database updates require recreation
+  
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: stockpredpro
+      app.kubernetes.io/component: database
+      tier: database
+  
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: stockpredpro
+        app.kubernetes.io/instance: production
+        app.kubernetes.io/component: database
+        tier: database
+        environment: production
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9187"
+        backup.kubernetes.io/enabled: "true"
+    
+    spec:
+      serviceAccountName: stockpredpro-service-account
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999  # PostgreSQL user
+        runAsGroup: 999
+        fsGroup: 999
+      
+      priorityClassName: stockpredpro-critical
+      
+      nodeSelector:
+        kubernetes.io/os: linux
+        node-type: database
+      
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: storage-type
+                operator: In
+                values: ["ssd", "nvme"]
+      
+      tolerations:
+      - key: "database"
+        operator: "Equal"
+        value: "postgres"
+        effect: "NoSchedule"
+      
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        imagePullPolicy: IfNotPresent
+        
+        ports:
+        - name: postgres
+          containerPort: 5432
+          protocol: TCP
+        
+        env:
+        - name: POSTGRES_DB
+          value: stockpredpro_prod
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: stockpredpro-db-secrets
+              key: username
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: stockpredpro-db-secrets
+              key: password
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 2Gi
+            ephemeral-storage: 1Gi
+          limits:
+            cpu: 4000m
+            memory: 8Gi
+            ephemeral-storage: 2Gi
+        
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 999
+          runAsGroup: 999
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false  # PostgreSQL needs write access
+          capabilities:
+            drop: ["ALL"]
+        
+        # Health checks
+        startupProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 30
+        
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+        - name: postgres-config
+          mountPath: /etc/postgresql/postgresql.conf
+          subPath: postgresql.conf
+          readOnly: true
+        - name: postgres-init
+          mountPath: /docker-entrypoint-initdb.d
+          readOnly: true
+        - name: postgres-backup
+          mountPath: /backups
+      
+      # PostgreSQL Exporter sidecar for monitoring
+      - name: postgres-exporter
+        image: prometheuscommunity/postgres-exporter:v0.12.0
+        imagePullPolicy: IfNotPresent
+        
+        ports:
+        - name: metrics
+          containerPort: 9187
+          protocol: TCP
+        
+        env:
+        - name: DATA_SOURCE_NAME
+          valueFrom:
+            secretKeyRef:
+              name: stockpredpro-db-secrets
+              key: exporter-dsn
+        
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+        
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: ["ALL"]
+      
+      volumes:
+      - name: postgres-data
+        persistentVolumeClaim:
+          claimName: stockpredpro-postgres-pvc
+      - name: postgres-config
+        configMap:
+          name: stockpredpro-db-config
+          defaultMode: 0644
+      - name: postgres-init
+        configMap:
+          name: postgres-init-scripts
+          defaultMode: 0755
+      - name: postgres-backup
+        persistentVolumeClaim:
+          claimName: stockpredpro-postgres-backup-pvc
+
+---
+# ============================================
+# Redis Cache Deployment
+# ============================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stockpredpro-redis
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/instance: production
+    app.kubernetes.io/component: cache
+    app.kubernetes.io/part-of: stockpredpro-platform
+    tier: cache
+    environment: production
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: stockpredpro
+      app.kubernetes.io/component: cache
+      tier: cache
+  
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: stockpredpro
+        app.kubernetes.io/instance: production
+        app.kubernetes.io/component: cache
+        tier: cache
+        environment: production
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9121"
+    
+    spec:
+      serviceAccountName: stockpredpro-service-account
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999  # Redis user
+        runAsGroup: 999
+        fsGroup: 999
+      
+      priorityClassName: stockpredpro-high
+      
+      nodeSelector:
+        kubernetes.io/os: linux
+        node-type: cache
+      
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        imagePullPolicy: IfNotPresent
+        
+        command: ["redis-server"]
+        args: ["/etc/redis/redis.conf"]
+        
+        ports:
+        - name: redis
+          containerPort: 6379
+          protocol: TCP
+        
+        env:
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: stockpredpro-redis-secrets
+              key: password
+        
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+            ephemeral-storage: 500Mi
+          limits:
+            cpu: 1000m
+            memory: 2Gi
+            ephemeral-storage: 1Gi
+        
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 999
+          runAsGroup: 999
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          capabilities:
+            drop: ["ALL"]
+        
+        # Health checks
+        startupProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 10
+        
+        livenessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        
+        readinessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+        - name: redis-config
+          mountPath: /etc/redis/redis.conf
+          subPath: redis.conf
+          readOnly: true
+      
+      # Redis Exporter sidecar
+      - name: redis-exporter
+        image: oliver006/redis_exporter:v1.50.0
+        imagePullPolicy: IfNotPresent
+        
+        ports:
+        - name: metrics
+          containerPort: 9121
+          protocol: TCP
+        
+        env:
+        - name: REDIS_ADDR
+          value: "redis://localhost:6379"
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: stockpredpro-redis-secrets
+              key: password
+        
+        resources:
+          requests:
+            cpu: 10m
+            memory: 24Mi
+          limits:
+            cpu: 100m
+            memory: 64Mi
+        
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: ["ALL"]
+      
+      volumes:
+      - name: redis-data
+        persistentVolumeClaim:
+          claimName: stockpredpro-redis-pvc
+      - name: redis-config
+        configMap:
+          name: stockpredpro-redis-config
+          defaultMode: 0644
+
+---
+# ============================================
+# Horizontal Pod Autoscaler for API
+# ============================================
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: stockpredpro-api-hpa
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: autoscaler
+    environment: production
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: stockpredpro-api
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+
+---
+# ============================================
+# Pod Disruption Budget for API
+# ============================================
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: stockpredpro-api-pdb
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: pdb
+    environment: production
+spec:
+  minAvailable: 2  # Always keep at least 2 pods running
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: stockpredpro
+      app.kubernetes.io/component: api
+      tier: application

@@ -1,0 +1,579 @@
+# ============================================
+# StockPredictionPro - configmap.yaml
+# Comprehensive configuration management for production, staging, and development environments
+# ============================================
+
+# ============================================
+# Production ConfigMap - Application Configuration
+# ============================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stockpredpro-config
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/instance: production
+    app.kubernetes.io/version: "2.0.0"
+    app.kubernetes.io/component: configmap
+    app.kubernetes.io/part-of: stockpredpro-platform
+    app.kubernetes.io/managed-by: kubectl
+    environment: production
+    config-type: application
+  annotations:
+    kubernetes.io/description: "StockPredictionPro production application configuration"
+data:
+  # Environment Configuration
+  ENVIRONMENT: "production"
+  DEBUG: "false"
+  LOG_LEVEL: "info"
+  PYTHONPATH: "/app/src"
+  
+  # API Configuration
+  API_V1_STR: "/api/v1"
+  PROJECT_NAME: "StockPredictionPro"
+  VERSION: "2.0.0"
+  API_HOST: "0.0.0.0"
+  API_PORT: "8000"
+  
+  # Database Configuration (non-sensitive)
+  DATABASE_DRIVER: "postgresql+asyncpg"
+  DATABASE_HOST: "stockpredpro-postgres-service"
+  DATABASE_PORT: "5432"
+  DATABASE_NAME: "stockpredpro_prod"
+  DATABASE_POOL_SIZE: "20"
+  DATABASE_MAX_OVERFLOW: "30"
+  DATABASE_POOL_TIMEOUT: "30"
+  DATABASE_POOL_RECYCLE: "3600"
+  DATABASE_ECHO: "false"
+  
+  # Redis Configuration (non-sensitive)
+  REDIS_HOST: "stockpredpro-redis-service"
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+  REDIS_POOL_SIZE: "20"
+  REDIS_SOCKET_TIMEOUT: "5"
+  REDIS_SOCKET_CONNECT_TIMEOUT: "5"
+  REDIS_RETRY_ON_TIMEOUT: "true"
+  
+  # Authentication & Security Configuration
+  JWT_ALGORITHM: "HS256"
+  ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+  REFRESH_TOKEN_EXPIRE_DAYS: "7"
+  PASSWORD_MIN_LENGTH: "8"
+  PASSWORD_REQUIRE_UPPERCASE: "true"
+  PASSWORD_REQUIRE_LOWERCASE: "true"
+  PASSWORD_REQUIRE_NUMBERS: "true"
+  PASSWORD_REQUIRE_SPECIAL_CHARS: "true"
+  
+  # CORS Configuration
+  ALLOWED_HOSTS: "api.stockpredpro.com,stockpredpro.com"
+  CORS_ORIGINS: "https://stockpredpro.com,https://app.stockpredpro.com"
+  CORS_ALLOW_CREDENTIALS: "true"
+  CORS_ALLOW_METHODS: "GET,POST,PUT,DELETE,OPTIONS,PATCH"
+  CORS_ALLOW_HEADERS: "Accept,Authorization,Content-Type,X-API-Key,X-Request-ID"
+  
+  # Performance & Scaling Configuration
+  WORKERS: "4"
+  MAX_REQUESTS: "1000"
+  MAX_REQUESTS_JITTER: "50"
+  TIMEOUT: "120"
+  KEEPALIVE: "5"
+  MAX_WORKER_CONNECTIONS: "1000"
+  
+  # Rate Limiting Configuration
+  RATE_LIMIT_REQUESTS_PER_MINUTE: "100"
+  RATE_LIMIT_BURST: "20"
+  RATE_LIMIT_SLIDING_WINDOW: "true"
+  
+  # File Upload Configuration
+  MAX_FILE_SIZE: "100MB"
+  ALLOWED_FILE_EXTENSIONS: ".csv,.json,.xlsx,.pkl,.joblib"
+  UPLOAD_DIRECTORY: "/app/uploads"
+  
+  # ML Model Configuration
+  MODEL_STORAGE_PATH: "/app/models"
+  MODEL_CACHE_SIZE: "1000"
+  MODEL_TIMEOUT: "30"
+  DEFAULT_MODEL_VERSION: "1.0.0"
+  ENABLE_MODEL_VERSIONING: "true"
+  ENABLE_MODEL_MONITORING: "true"
+  
+  # Data Source Configuration
+  DATA_CACHE_TTL: "300"
+  DATA_RETRY_ATTEMPTS: "3"
+  DATA_RETRY_DELAY: "1"
+  DATA_TIMEOUT: "30"
+  ENABLE_DATA_VALIDATION: "true"
+  ENABLE_DATA_QUALITY_CHECKS: "true"
+  
+  # Monitoring & Observability
+  ENABLE_METRICS: "true"
+  METRICS_PORT: "8001"
+  ENABLE_DISTRIBUTED_TRACING: "true"
+  TRACE_SAMPLING_RATE: "0.1"
+  ENABLE_PROFILING: "false"
+  
+  # Feature Flags
+  ENABLE_NEW_PREDICTION_ENGINE: "true"
+  ENABLE_ADVANCED_ANALYTICS: "true"
+  ENABLE_REAL_TIME_SIGNALS: "true"
+  ENABLE_BACKTESTING: "true"
+  ENABLE_PORTFOLIO_OPTIMIZATION: "true"
+
+---
+# ============================================
+# Production ConfigMap - External Services Configuration
+# ============================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stockpredpro-external-config
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/instance: production
+    app.kubernetes.io/component: configmap
+    environment: production
+    config-type: external-services
+data:
+  # External API Endpoints
+  ALPHA_VANTAGE_BASE_URL: "https://www.alphavantage.co/query"
+  YAHOO_FINANCE_BASE_URL: "https://query1.finance.yahoo.com"
+  FRED_BASE_URL: "https://api.stlouisfed.org/fred"
+  IEX_CLOUD_BASE_URL: "https://cloud.iexapis.com/stable"
+  
+  # External API Rate Limits
+  ALPHA_VANTAGE_RATE_LIMIT: "5"
+  YAHOO_FINANCE_RATE_LIMIT: "2000"
+  FRED_RATE_LIMIT: "120"
+  IEX_CLOUD_RATE_LIMIT: "100"
+  
+  # External API Timeouts
+  EXTERNAL_API_TIMEOUT: "30"
+  EXTERNAL_API_RETRY_ATTEMPTS: "3"
+  EXTERNAL_API_RETRY_DELAY: "2"
+  
+  # Market Data Configuration
+  DEFAULT_MARKET_DATA_SOURCE: "yahoo_finance"
+  FALLBACK_DATA_SOURCES: "alpha_vantage,iex_cloud"
+  MARKET_DATA_CACHE_TTL: "60"
+  REAL_TIME_DATA_ENABLED: "true"
+  
+  # Notification Services
+  EMAIL_SERVICE_PROVIDER: "sendgrid"
+  SMS_SERVICE_PROVIDER: "twilio"
+  WEBHOOK_TIMEOUT: "10"
+  WEBHOOK_RETRY_ATTEMPTS: "3"
+
+---
+# ============================================
+# Production ConfigMap - Logging Configuration
+# ============================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stockpredpro-logging-config
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: configmap
+    environment: production
+    config-type: logging
+data:
+  logging.conf: |
+    [loggers]
+    keys=root,stockpredpro
+
+    [handlers]
+    keys=consoleHandler,fileHandler,structuredHandler
+
+    [formatters]
+    keys=consoleFormatter,fileFormatter,jsonFormatter
+
+    [logger_root]
+    level=INFO
+    handlers=consoleHandler
+
+    [logger_stockpredpro]
+    level=INFO
+    handlers=consoleHandler,structuredHandler
+    qualname=stockpredpro
+    propagate=0
+
+    [handler_consoleHandler]
+    class=StreamHandler
+    level=INFO
+    formatter=consoleFormatter
+    args=(sys.stdout,)
+
+    [handler_fileHandler]
+    class=handlers.RotatingFileHandler
+    level=INFO
+    formatter=fileFormatter
+    args=('/app/logs/stockpredpro.log', 'a', 10485760, 5)
+
+    [handler_structuredHandler]
+    class=StreamHandler
+    level=INFO
+    formatter=jsonFormatter
+    args=(sys.stdout,)
+
+    [formatter_consoleFormatter]
+    format=%(asctime)s - %(name)s - %(levelname)s - %(message)s
+    datefmt=%Y-%m-%d %H:%M:%S
+
+    [formatter_fileFormatter]
+    format=%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s
+    datefmt=%Y-%m-%d %H:%M:%S
+
+    [formatter_jsonFormatter]
+    format={"timestamp": "%(asctime)s", "level": "%(levelname)s", "logger": "%(name)s", "message": "%(message)s", "function": "%(funcName)s", "line": %(lineno)d}
+    datefmt=%Y-%m-%dT%H:%M:%S
+
+---
+# ============================================
+# Production ConfigMap - Nginx Configuration
+# ============================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stockpredpro-nginx-config
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: configmap
+    environment: production
+    config-type: nginx
+data:
+  nginx.conf: |
+    upstream stockpredpro_backend {
+        least_conn;
+        server stockpredpro-api-service:8000 max_fails=3 fail_timeout=30s;
+        keepalive 32;
+    }
+    
+    server {
+        listen 80;
+        server_name api.stockpredpro.com;
+        return 301 https://$server_name$request_uri;
+    }
+    
+    server {
+        listen 443 ssl http2;
+        server_name api.stockpredpro.com;
+        
+        ssl_certificate /etc/nginx/ssl/tls.crt;
+        ssl_certificate_key /etc/nginx/ssl/tls.key;
+        ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_ciphers ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-CHACHA20-POLY1305;
+        ssl_prefer_server_ciphers off;
+        
+        location / {
+            proxy_pass http://stockpredpro_backend;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_read_timeout 90;
+            proxy_connect_timeout 30;
+        }
+        
+        location /health {
+            access_log off;
+            proxy_pass http://stockpredpro_backend;
+        }
+    }
+
+---
+# ============================================
+# Development Environment ConfigMap
+# ============================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stockpredpro-dev-config
+  namespace: stockpredpro-dev
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/instance: development
+    app.kubernetes.io/component: configmap
+    environment: development
+    config-type: application
+data:
+  # Development Environment Configuration
+  ENVIRONMENT: "development"
+  DEBUG: "true"
+  LOG_LEVEL: "debug"
+  PYTHONPATH: "/app/src"
+  
+  # API Configuration (Development)
+  API_V1_STR: "/api/v1"
+  PROJECT_NAME: "StockPredictionPro-Dev"
+  VERSION: "2.0.0-dev"
+  API_HOST: "0.0.0.0"
+  API_PORT: "8000"
+  
+  # Database Configuration (Development)
+  DATABASE_DRIVER: "postgresql+asyncpg"
+  DATABASE_HOST: "stockpredpro-postgres-dev-service"
+  DATABASE_PORT: "5432"
+  DATABASE_NAME: "stockpredpro_dev"
+  DATABASE_POOL_SIZE: "10"
+  DATABASE_MAX_OVERFLOW: "20"
+  DATABASE_ECHO: "true"
+  
+  # Redis Configuration (Development)
+  REDIS_HOST: "stockpredpro-redis-dev-service"
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+  REDIS_POOL_SIZE: "10"
+  
+  # Development-specific settings
+  CORS_ORIGINS: "http://localhost:3000,http://localhost:8080"
+  ALLOWED_HOSTS: "localhost,127.0.0.1,stockpredpro-dev.local"
+  
+  # Relaxed security for development
+  JWT_ALGORITHM: "HS256"
+  ACCESS_TOKEN_EXPIRE_MINUTES: "60"
+  PASSWORD_MIN_LENGTH: "6"
+  
+  # Development features
+  ENABLE_HOT_RELOAD: "true"
+  ENABLE_DEBUG_TOOLBAR: "true"
+  ENABLE_PROFILING: "true"
+  ENABLE_MOCK_DATA: "true"
+  
+  # Reduced performance settings for development
+  WORKERS: "1"
+  MAX_REQUESTS: "100"
+  TIMEOUT: "60"
+  
+  # External APIs (Development)
+  ALPHA_VANTAGE_BASE_URL: "https://www.alphavantage.co/query"
+  DEFAULT_MARKET_DATA_SOURCE: "mock"
+  ENABLE_API_MOCKING: "true"
+
+---
+# ============================================
+# Staging Environment ConfigMap
+# ============================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stockpredpro-staging-config
+  namespace: stockpredpro-staging
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/instance: staging
+    app.kubernetes.io/component: configmap
+    environment: staging
+    config-type: application
+data:
+  # Staging Environment Configuration
+  ENVIRONMENT: "staging"
+  DEBUG: "false"
+  LOG_LEVEL: "info"
+  PYTHONPATH: "/app/src"
+  
+  # API Configuration (Staging)
+  API_V1_STR: "/api/v1"
+  PROJECT_NAME: "StockPredictionPro-Staging"
+  VERSION: "2.0.0-rc"
+  API_HOST: "0.0.0.0"
+  API_PORT: "8000"
+  
+  # Database Configuration (Staging)
+  DATABASE_DRIVER: "postgresql+asyncpg"
+  DATABASE_HOST: "stockpredpro-postgres-staging-service"
+  DATABASE_PORT: "5432"
+  DATABASE_NAME: "stockpredpro_staging"
+  DATABASE_POOL_SIZE: "15"
+  DATABASE_MAX_OVERFLOW: "25"
+  DATABASE_ECHO: "false"
+  
+  # Redis Configuration (Staging)
+  REDIS_HOST: "stockpredpro-redis-staging-service"
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+  REDIS_POOL_SIZE: "15"
+  
+  # Staging-specific settings
+  CORS_ORIGINS: "https://staging.stockpredpro.com"
+  ALLOWED_HOSTS: "staging-api.stockpredpro.com"
+  
+  # Security settings (production-like)
+  JWT_ALGORITHM: "HS256"
+  ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+  PASSWORD_MIN_LENGTH: "8"
+  
+  # Performance settings (between dev and prod)
+  WORKERS: "2"
+  MAX_REQUESTS: "500"
+  TIMEOUT: "90"
+  
+  # External APIs (Staging)
+  ALPHA_VANTAGE_BASE_URL: "https://www.alphavantage.co/query"
+  DEFAULT_MARKET_DATA_SOURCE: "yahoo_finance"
+
+---
+# ============================================
+# Database Configuration
+# ============================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stockpredpro-db-config
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: configmap
+    config-type: database
+data:
+  postgresql.conf: |
+    # Connection Settings
+    listen_addresses = '*'
+    port = 5432
+    max_connections = 200
+    
+    # Memory Configuration
+    shared_buffers = 512MB
+    effective_cache_size = 2GB
+    maintenance_work_mem = 128MB
+    work_mem = 8MB
+    
+    # Write Ahead Log
+    wal_buffers = 32MB
+    checkpoint_completion_target = 0.9
+    max_wal_size = 1GB
+    min_wal_size = 256MB
+    
+    # Query Planner
+    random_page_cost = 1.1
+    effective_io_concurrency = 200
+    
+    # Logging
+    logging_collector = on
+    log_directory = '/var/lib/postgresql/data/logs'
+    log_filename = 'postgresql-%Y-%m-%d.log'
+    log_statement = 'mod'
+    log_min_duration_statement = 1000
+    
+    # Performance
+    checkpoint_timeout = 15min
+    default_statistics_target = 100
+
+  pg_hba.conf: |
+    # TYPE  DATABASE        USER            ADDRESS                 METHOD
+    local   all             all                                     trust
+    host    all             all             127.0.0.1/32            md5
+    host    all             all             ::1/128                 md5
+    host    all             all             0.0.0.0/0               md5
+
+---
+# ============================================
+# Redis Configuration
+# ============================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stockpredpro-redis-config
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: configmap
+    config-type: redis
+data:
+  redis.conf: |
+    # Network
+    bind 0.0.0.0
+    port 6379
+    timeout 300
+    
+    # General
+    daemonize no
+    loglevel notice
+    databases 16
+    
+    # Memory Management
+    maxmemory 1gb
+    maxmemory-policy allkeys-lru
+    
+    # Persistence
+    save 900 1
+    save 300 10
+    save 60 10000
+    stop-writes-on-bgsave-error yes
+    rdbcompression yes
+    rdbchecksum yes
+    dbfilename dump.rdb
+    
+    # Append Only File
+    appendonly yes
+    appendfilename "appendonly.aof"
+    appendfsync everysec
+    no-appendfsync-on-rewrite no
+    auto-aof-rewrite-percentage 100
+    auto-aof-rewrite-min-size 64mb
+    
+    # Security
+    # requirepass will be set via secret
+    
+    # Performance
+    tcp-keepalive 300
+    tcp-backlog 511
+
+---
+# ============================================
+# Monitoring Configuration
+# ============================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stockpredpro-monitoring-config
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: configmap
+    config-type: monitoring
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+    
+    scrape_configs:
+      - job_name: 'stockpredpro-api'
+        static_configs:
+          - targets: ['stockpredpro-api-service:8001']
+        metrics_path: '/metrics'
+        scrape_interval: 30s
+        
+      - job_name: 'stockpredpro-postgres'
+        static_configs:
+          - targets: ['stockpredpro-postgres-exporter:9187']
+        scrape_interval: 30s
+        
+      - job_name: 'stockpredpro-redis'
+        static_configs:
+          - targets: ['stockpredpro-redis-exporter:9121']
+        scrape_interval: 30s
+
+  grafana-dashboard.json: |
+    {
+      "dashboard": {
+        "title": "StockPredictionPro Metrics",
+        "panels": [
+          {
+            "title": "API Response Time",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+                "legendFormat": "95th percentile"
+              }
+            ]
+          }
+        ]
+      }
+    }

@@ -1,0 +1,139 @@
+# ============================================
+# StockPredictionPro - Dockerfile.prod
+# Production-optimized multi-stage Docker build for FastAPI with security and performance optimizations
+# ============================================
+
+# ============================================
+# Stage 1: Build Environment
+# ============================================
+FROM python:3.11-slim as builder
+
+# Set build-time environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    gcc \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create virtual environment for dependency isolation
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copy requirements and install dependencies
+COPY requirements/requirements.txt /tmp/requirements.txt
+RUN pip install --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -r /tmp/requirements.txt
+
+# Install production WSGI server
+RUN pip install --no-cache-dir \
+    gunicorn \
+    uvicorn[standard]
+
+# ============================================
+# Stage 2: Production Runtime
+# ============================================
+FROM python:3.11-slim as production
+
+# Production environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH=/app/src \
+    PATH="/opt/venv/bin:$PATH" \
+    ENVIRONMENT=production \
+    DEBUG=false
+
+# Install only essential runtime packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Essential runtime libraries
+    libpq5 \
+    # Curl for health checks
+    curl \
+    # Dumb-init for proper signal handling
+    dumb-init \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /tmp/* \
+    && rm -rf /var/tmp/*
+
+# Create non-root user for security
+RUN groupadd -r appuser && \
+    useradd -r -g appuser -d /app -s /sbin/nologin \
+    -c "App user" appuser
+
+# Create application directories with proper permissions
+RUN mkdir -p /app/src \
+             /app/models \
+             /app/downloads \
+             /app/logs \
+    && chown -R appuser:appuser /app
+
+# Copy virtual environment from builder stage
+COPY --from=builder /opt/venv /opt/venv
+
+# Set working directory
+WORKDIR /app
+
+# Copy application code with proper ownership
+COPY --chown=appuser:appuser src/ /app/src/
+COPY --chown=appuser:appuser config/ /app/config/
+
+# Copy startup scripts and configurations
+COPY --chown=appuser:appuser deployment/docker/scripts/ /app/scripts/
+RUN chmod +x /app/scripts/*.sh
+
+# Create production configuration
+RUN echo "# Production Environment Variables" > /app/.env.prod && \
+    echo "ENVIRONMENT=production" >> /app/.env.prod && \
+    echo "DEBUG=false" >> /app/.env.prod && \
+    echo "LOG_LEVEL=info" >> /app/.env.prod && \
+    chown appuser:appuser /app/.env.prod
+
+# Security: Remove unnecessary packages and files
+RUN apt-get autoremove -y && \
+    apt-get autoclean && \
+    find /app -type f -name "*.pyc" -delete && \
+    find /app -type f -name "*.pyo" -delete && \
+    find /app -type d -name "__pycache__" -exec rm -rf {} + || true
+
+# Switch to non-root user
+USER appuser
+
+# Expose port (using non-standard port for security)
+EXPOSE 8000
+
+# Add healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health/ping || exit 1
+
+# Set resource limits
+LABEL maintainer="StockPredictionPro Team <dev@stockpredpro.com>" \
+      version="2.0.0" \
+      description="Production StockPredictionPro API" \
+      org.opencontainers.image.title="StockPredictionPro API" \
+      org.opencontainers.image.description="Advanced Stock Prediction & Trading Signals Platform" \
+      org.opencontainers.image.version="2.0.0" \
+      org.opencontainers.image.vendor="StockPredictionPro" \
+      org.opencontainers.image.licenses="Commercial"
+
+# Production startup command with Gunicorn + Uvicorn workers
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+CMD ["/app/scripts/start-production.sh"]
+
+# ============================================
+# Alternative Production Commands
+# ============================================
+
+# Basic Gunicorn with Uvicorn workers:
+# CMD ["gunicorn", "src.api.main:app", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8000", "--max-requests", "1000", "--max-requests-jitter", "50", "--preload"]
+
+# High-performance configuration:
+# CMD ["gunicorn", "src.api.main:app", "--worker-class", "uvicorn.workers.UvicornWorker", "--workers", "4", "--bind", "0.0.0.0:8000", "--max-requests", "1000", "--max-requests-jitter", "50", "--timeout", "120", "--keepalive", "5", "--preload", "--access-logfile", "-", "--error-logfile", "-", "--log-level", "info"]
+
+# Single Uvicorn process (for smaller deployments):
+# CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--log-level", "info", "--access-log", "--no-use-colors"]

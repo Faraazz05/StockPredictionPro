@@ -1,0 +1,97 @@
+---
+# ============================================
+# StockPredictionPro - Ansible Playbook
+# Server configuration and deployment automation
+# ============================================
+
+- name: StockPredictionPro Infrastructure Setup
+  hosts: all
+  become: yes
+  gather_facts: yes
+  
+  vars:
+    project_name: "stockpredpro"
+    environment: "{{ env | default('development') }}"
+    
+  pre_tasks:
+    - name: Update package cache
+      package:
+        update_cache: yes
+      when: ansible_os_family in ['Debian', 'RedHat']
+      
+    - name: Ensure required packages are installed
+      package:
+        name:
+          - curl
+          - wget
+          - unzip
+          - python3
+          - python3-pip
+        state: present
+
+  roles:
+    - common
+    - docker
+    - monitoring
+    
+  post_tasks:
+    - name: Verify services are running
+      service:
+        name: "{{ item }}"
+        state: started
+        enabled: yes
+      loop:
+        - docker
+      
+  handlers:
+    - name: restart docker
+      service:
+        name: docker
+        state: restarted
+
+# ============================================
+# Separate plays for different server types
+# ============================================
+
+- name: Configure Application Servers
+  hosts: webservers
+  become: yes
+  
+  roles:
+    - nginx
+    - ssl_certificates
+    
+- name: Configure Database Servers  
+  hosts: databases
+  become: yes
+  
+  roles:
+    - postgresql
+    - backup
+
+- name: Configure Monitoring Servers
+  hosts: monitoring
+  become: yes
+  
+  roles:
+    - prometheus
+    - grafana
+
+# ============================================
+# Usage Examples:
+# ============================================
+
+# Run entire playbook:
+# ansible-playbook -i inventory/production playbook.yml
+
+# Run specific play:
+# ansible-playbook -i inventory/production playbook.yml --limit webservers
+
+# Run with extra variables:
+# ansible-playbook -i inventory/production playbook.yml -e "env=production"
+
+# Dry run (check mode):
+# ansible-playbook -i inventory/production playbook.yml --check
+
+# Run specific roles:
+# ansible-playbook -i inventory/production playbook.yml --tags "docker,monitoring"

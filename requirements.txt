@@ -1,71 +1,174 @@
-# ============================
+# ============================================
 # StockPredictionPro - requirements.txt
-# Copy-paste into your project root
-# ============================
+# Complete Python dependencies for the stock prediction platform
+# ============================================
 
-# Core
-python-dotenv
-PyYAML
-pandas
-numpy
-scipy
-joblib
-tqdm
-
-# Web UI
-streamlit
-plotly
-
-# Data sources
-yfinance
-requests
-httpx
-
-# Technical indicators (primary)
-ta
-pandas-ta
-# Optional (requires system libs; enable only if TA-Lib is installed on your OS)
-# TA-Lib==0.4.32
-
-# Machine Learning
-scikit-learn
-optuna
-shap
-
-# Optional tree/boosting models (uncomment if you plan to use them)
-xgboost
-lightgbm
-
-# API (optional service layer)
+# ============================================
+# Core Web Framework & API
+# ============================================
 fastapi
 uvicorn[standard]
 pydantic
+python-multipart
+jinja2
 
-# Caching / Storage (optional; uncomment if wired)
+# ============================================
+# Database & ORM
+# ============================================
+sqlalchemy[asyncio]
+asyncpg
+alembic
+psycopg[binary]
+
+# ============================================
+# Caching & Session Management
+# ============================================
+aioredis
 redis
-SQLAlchemy
 
-# Logging & Observability
-loguru
-structlog
-sentry-sdk
+# ============================================
+# HTTP Client & Networking
+# ============================================
+httpx
+requests
+aiohttp
+
+# ============================================
+# Data Science & Machine Learning
+# ============================================
+pandas
+numpy
+scipy
+scikit-learn
+matplotlib
+seaborn
+
+# ============================================
+# Advanced ML Libraries
+# ============================================
+xgboost
+lightgbm
+catboost
+tensorflow
+torch
+torchvision
+transformers
+datasets
+
+# ============================================
+# Financial Data APIs
+# ============================================
+yfinance
+alpha_vantage
+fredapi
+quandl
+
+# ============================================
+# Jupyter & Notebooks
+# ============================================
+jupyter
+jupyterlab
+nbformat
+ipykernel
+ipywidgets
+
+# ============================================
+# Testing Framework
+# ============================================
+pytest
+pytest-asyncio
+pytest-cov
+pytest-mock
+httpx  # For testing FastAPI
+
+# ============================================
+# Monitoring & Logging
+# ============================================
 prometheus-client
+loguru
+sentry-sdk[fastapi]
+structlog
 
-# Packaging & Deployment
-pyinstaller
+# ============================================
+# Security & Authentication
+# ============================================
+cryptography
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart
+
+# ============================================
+# Environment & Configuration
+# ============================================
+python-dotenv
+pydantic-settings
+click
+
+# ============================================
+# Cloud & Infrastructure
+# ============================================
+boto3
+google-cloud-storage
+azure-storage-blob
+apache-libcloud
+
+# ============================================
+# Deployment & Automation
+# ============================================
+ansible
 docker
+kubernetes
 
-# Dev Tools
+# ============================================
+# Performance & Optimization
+# ============================================
+uvloop
+orjson
+pyarrow
+
+# ============================================
+# Date & Time Utilities
+# ============================================
+python-dateutil
+pytz
+pendulum
+
+# ============================================
+# Visualization & Reporting
+# ============================================
+plotly
+bokeh
+dash
+streamlit
+
+# ============================================
+# Data Processing & ETL
+# ============================================
+openpyxl
+xlrd
+beautifulsoup4
+lxml
+
+# ============================================
+# Technical Analysis
+# ============================================
+ta-lib
+pandas-ta
+stockstats
+
+# ============================================
+# Optional: Development Tools
+# ============================================
 black
 isort
 flake8
 mypy
 pre-commit
-yamllint
 
-# Testing
-pytest
-pytest-cov
-pytest-mock
-pytest-asyncio
-
+# ============================================
+# Optional: Additional ML Tools
+# ============================================
+optuna
+mlflow
+wandb
+shap

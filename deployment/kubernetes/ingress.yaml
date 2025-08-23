@@ -1,0 +1,558 @@
+# ============================================
+# StockPredictionPro - ingress.yaml
+# Production-ready Kubernetes Ingress with SSL/TLS, rate limiting, and advanced routing
+# ============================================
+
+# ============================================
+# Main API Ingress - Production
+# ============================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: stockpredpro-api-ingress
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/instance: production
+    app.kubernetes.io/version: "2.0.0"
+    app.kubernetes.io/component: ingress
+    app.kubernetes.io/part-of: stockpredpro-platform
+    app.kubernetes.io/managed-by: kubectl
+    tier: networking
+    environment: production
+  annotations:
+    kubernetes.io/description: "Production API ingress for StockPredictionPro with SSL termination and rate limiting"
+    
+    # Ingress Controller Configuration
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/ingress.class: "nginx"
+    
+    # SSL/TLS Configuration
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    cert-manager.io/acme-challenge-type: "http01"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/ssl-protocols: "TLSv1.2 TLSv1.3"
+    nginx.ingress.kubernetes.io/ssl-ciphers: "ECDHE-RSA-AES256-GCM-SHA384,ECDHE-RSA-CHACHA20-POLY1305,ECDHE-RSA-AES128-GCM-SHA256"
+    
+    # Security Headers
+    nginx.ingress.kubernetes.io/server-snippet: |
+      add_header X-Frame-Options "SAMEORIGIN" always;
+      add_header X-Content-Type-Options "nosniff" always;
+      add_header X-XSS-Protection "1; mode=block" always;
+      add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+      add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+      add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' wss: https:;" always;
+    
+    # Rate Limiting
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    nginx.ingress.kubernetes.io/rate-limit-connections: "10"
+    nginx.ingress.kubernetes.io/limit-whitelist: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+    
+    # Authentication Rate Limiting (stricter for auth endpoints)
+    nginx.ingress.kubernetes.io/limit-rps: "5"
+    nginx.ingress.kubernetes.io/limit-rpm: "100"
+    
+    # Performance Optimizations
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-next-upstream-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-buffering: "on"
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "8k"
+    
+    # CORS Configuration
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://stockpredpro.com,https://app.stockpredpro.com,https://dashboard.stockpredpro.com"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,X-API-Key"
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+    nginx.ingress.kubernetes.io/cors-max-age: "86400"
+    
+    # Request/Response Modifications
+    nginx.ingress.kubernetes.io/rewrite-target: "/$2"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    
+    # Health Check Configuration
+    nginx.ingress.kubernetes.io/health-check-path: "/health/ping"
+    nginx.ingress.kubernetes.io/health-check-timeout: "5"
+    nginx.ingress.kubernetes.io/health-check-interval: "30"
+    
+    # Load Balancing
+    nginx.ingress.kubernetes.io/upstream-hash-by: "$request_uri"
+    nginx.ingress.kubernetes.io/load-balance: "ewma"
+    
+    # Monitoring
+    nginx.ingress.kubernetes.io/enable-access-log: "true"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      access_log /var/log/nginx/stockpredpro-api.access.log json_combined;
+      error_log /var/log/nginx/stockpredpro-api.error.log;
+
+spec:
+  ingressClassName: nginx
+  
+  # TLS Configuration
+  tls:
+  - hosts:
+    - api.stockpredpro.com
+    - stockpredpro.com
+    - www.stockpredpro.com
+    secretName: stockpredpro-tls-cert
+  
+  # Routing Rules
+  rules:
+  # Main API Domain
+  - host: api.stockpredpro.com
+    http:
+      paths:
+      # API v1 Routes
+      - path: /api/v1(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: stockpredpro-api-service
+            port:
+              number: 80
+      
+      # Health Check Routes (no authentication)
+      - path: /health
+        pathType: Prefix
+        backend:
+          service:
+            name: stockpredpro-api-service
+            port:
+              number: 80
+      
+      # API Documentation
+      - path: /docs
+        pathType: Exact
+        backend:
+          service:
+            name: stockpredpro-api-service
+            port:
+              number: 80
+      
+      - path: /redoc
+        pathType: Exact
+        backend:
+          service:
+            name: stockpredpro-api-service
+            port:
+              number: 80
+      
+      - path: /openapi.json
+        pathType: Exact
+        backend:
+          service:
+            name: stockpredpro-api-service
+            port:
+              number: 80
+      
+      # Root path redirect
+      - path: /
+        pathType: Exact
+        backend:
+          service:
+            name: stockpredpro-api-service
+            port:
+              number: 80
+  
+  # Apex Domain (redirect to API docs)
+  - host: stockpredpro.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: stockpredpro-api-service
+            port:
+              number: 80
+  
+  # WWW Subdomain (redirect to apex)
+  - host: www.stockpredpro.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: stockpredpro-api-service
+            port:
+              number: 80
+
+---
+# ============================================
+# Authentication Service Ingress (Separate with stricter rate limiting)
+# ============================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: stockpredpro-auth-ingress
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: auth-ingress
+    environment: production
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    
+    # Stricter rate limiting for authentication
+    nginx.ingress.kubernetes.io/rate-limit: "20"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    nginx.ingress.kubernetes.io/rate-limit-connections: "3"
+    nginx.ingress.kubernetes.io/limit-rps: "2"
+    nginx.ingress.kubernetes.io/limit-rpm: "20"
+    
+    # Enhanced security for auth endpoints
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/hsts: "true"
+    nginx.ingress.kubernetes.io/hsts-max-age: "31536000"
+    nginx.ingress.kubernetes.io/hsts-include-subdomains: "true"
+    nginx.ingress.kubernetes.io/hsts-preload: "true"
+    
+    # Additional security headers for auth
+    nginx.ingress.kubernetes.io/server-snippet: |
+      add_header X-Frame-Options "DENY" always;
+      add_header X-Content-Type-Options "nosniff" always;
+      add_header X-XSS-Protection "1; mode=block" always;
+      add_header Referrer-Policy "no-referrer" always;
+      add_header Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self';" always;
+
+spec:
+  ingressClassName: nginx
+  
+  tls:
+  - hosts:
+    - auth.stockpredpro.com
+    secretName: stockpredpro-auth-tls-cert
+  
+  rules:
+  - host: auth.stockpredpro.com
+    http:
+      paths:
+      - path: /api/v1/auth
+        pathType: Prefix
+        backend:
+          service:
+            name: stockpredpro-api-service
+            port:
+              number: 80
+      
+      - path: /api/v1/users
+        pathType: Prefix
+        backend:
+          service:
+            name: stockpredpro-api-service
+            port:
+              number: 80
+
+---
+# ============================================
+# WebSocket Ingress for Real-time Features
+# ============================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: stockpredpro-websocket-ingress
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: websocket-ingress
+    environment: production
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    
+    # WebSocket Configuration
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/websocket-services: "stockpredpro-websocket-service"
+    
+    # WebSocket specific headers
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header Upgrade $http_upgrade;
+      proxy_set_header Connection "upgrade";
+      proxy_http_version 1.1;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header Host $host;
+      proxy_cache_bypass $http_upgrade;
+
+spec:
+  ingressClassName: nginx
+  
+  tls:
+  - hosts:
+    - ws.stockpredpro.com
+    secretName: stockpredpro-ws-tls-cert
+  
+  rules:
+  - host: ws.stockpredpro.com
+    http:
+      paths:
+      - path: /ws
+        pathType: Prefix
+        backend:
+          service:
+            name: stockpredpro-websocket-service
+            port:
+              number: 80
+
+---
+# ============================================
+# Monitoring Dashboard Ingress
+# ============================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: stockpredpro-monitoring-ingress
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: monitoring-ingress
+    environment: production
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    
+    # Basic Authentication for monitoring endpoints
+    nginx.ingress.kubernetes.io/auth-type: "basic"
+    nginx.ingress.kubernetes.io/auth-secret: "stockpredpro-monitoring-auth"
+    nginx.ingress.kubernetes.io/auth-realm: "StockPredictionPro Monitoring"
+    
+    # IP Whitelisting for monitoring
+    nginx.ingress.kubernetes.io/whitelist-source-range: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+    
+    # Enhanced security for monitoring
+    nginx.ingress.kubernetes.io/server-snippet: |
+      add_header X-Robots-Tag "noindex, nofollow" always;
+      add_header X-Frame-Options "SAMEORIGIN" always;
+
+spec:
+  ingressClassName: nginx
+  
+  tls:
+  - hosts:
+    - monitoring.stockpredpro.com
+    secretName: stockpredpro-monitoring-tls-cert
+  
+  rules:
+  - host: monitoring.stockpredpro.com
+    http:
+      paths:
+      # Grafana Dashboard
+      - path: /grafana
+        pathType: Prefix
+        backend:
+          service:
+            name: stockpredpro-grafana-service
+            port:
+              number: 3000
+      
+      # Prometheus (admin only)
+      - path: /prometheus
+        pathType: Prefix
+        backend:
+          service:
+            name: stockpredpro-prometheus-service
+            port:
+              number: 9090
+
+---
+# ============================================
+# Development Environment Ingress
+# ============================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: stockpredpro-dev-ingress
+  namespace: stockpredpro-dev
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/instance: development
+    app.kubernetes.io/component: dev-ingress
+    environment: development
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-staging"
+    
+    # Relaxed settings for development
+    nginx.ingress.kubernetes.io/rate-limit: "1000"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    
+    # Development-specific features
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+    
+    # Larger body size for development uploads
+    nginx.ingress.kubernetes.io/proxy-body-size: "500m"
+
+spec:
+  ingressClassName: nginx
+  
+  tls:
+  - hosts:
+    - dev.stockpredpro.local
+    - api-dev.stockpredpro.local
+    secretName: stockpredpro-dev-tls-cert
+  
+  rules:
+  # Development API
+  - host: api-dev.stockpredpro.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: stockpredpro-api-dev-service
+            port:
+              number: 80
+      
+      # Jupyter Notebook access
+      - path: /jupyter
+        pathType: Prefix
+        backend:
+          service:
+            name: stockpredpro-api-dev-service
+            port:
+              number: 8888
+  
+  # Development Dashboard
+  - host: dev.stockpredpro.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: stockpredpro-frontend-dev-service
+            port:
+              number: 80
+
+---
+# ============================================
+# Staging Environment Ingress
+# ============================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: stockpredpro-staging-ingress
+  namespace: stockpredpro-staging
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/instance: staging
+    app.kubernetes.io/component: staging-ingress
+    environment: staging
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-staging"
+    
+    # Production-like settings but with staging certificates
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rate-limit: "200"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    
+    # Basic auth for staging access
+    nginx.ingress.kubernetes.io/auth-type: "basic"
+    nginx.ingress.kubernetes.io/auth-secret: "stockpredpro-staging-auth"
+    nginx.ingress.kubernetes.io/auth-realm: "StockPredictionPro Staging"
+
+spec:
+  ingressClassName: nginx
+  
+  tls:
+  - hosts:
+    - staging.stockpredpro.com
+    - api-staging.stockpredpro.com
+    secretName: stockpredpro-staging-tls-cert
+  
+  rules:
+  - host: api-staging.stockpredpro.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: stockpredpro-api-staging-service
+            port:
+              number: 80
+  
+  - host: staging.stockpredpro.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: stockpredpro-frontend-staging-service
+            port:
+              number: 80
+
+---
+# ============================================
+# File Downloads Ingress (with authentication)
+# ============================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: stockpredpro-downloads-ingress
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: downloads-ingress
+    environment: production
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    
+    # Authentication required for downloads
+    nginx.ingress.kubernetes.io/auth-url: "http://stockpredpro-api-service.stockpredpro.svc.cluster.local/api/v1/auth/verify"
+    nginx.ingress.kubernetes.io/auth-method: "GET"
+    nginx.ingress.kubernetes.io/auth-response-headers: "X-User-ID,X-User-Email,X-User-Role"
+    
+    # Large file support
+    nginx.ingress.kubernetes.io/proxy-body-size: "1g"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    
+    # Download-specific headers
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      add_header X-Content-Type-Options "nosniff" always;
+      add_header X-Frame-Options "DENY" always;
+      add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+
+spec:
+  ingressClassName: nginx
+  
+  tls:
+  - hosts:
+    - downloads.stockpredpro.com
+    secretName: stockpredpro-downloads-tls-cert
+  
+  rules:
+  - host: downloads.stockpredpro.com
+    http:
+      paths:
+      - path: /models
+        pathType: Prefix
+        backend:
+          service:
+            name: stockpredpro-api-service
+            port:
+              number: 80
+      
+      - path: /reports
+        pathType: Prefix
+        backend:
+          service:
+            name: stockpredpro-api-service
+            port:
+              number: 80

@@ -1,0 +1,176 @@
+# ============================================
+# StockPredictionPro - Dockerfile.dev
+# Development Docker image with hot reload, debugging, and development tools
+# ============================================
+
+# Use Python 3.11 slim image for smaller size but with full development capabilities
+FROM python:3.11-slim
+
+# Set environment variables for development
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONPATH=/app/src \
+    ENVIRONMENT=development \
+    DEBUG=true
+
+# Create non-root user for security (even in dev)
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
+# Install system dependencies required for our ML and data processing stack
+RUN apt-get update && apt-get install -y \
+    # Build tools for compiling Python packages
+    build-essential \
+    gcc \
+    g++ \
+    # Git for version control (useful in containers)
+    git \
+    # Curl for health checks and debugging
+    curl \
+    # PostgreSQL client for database debugging
+    postgresql-client \
+    # Development and debugging tools
+    vim \
+    nano \
+    htop \
+    # Clean up apt cache to reduce image size
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements first for better Docker layer caching
+# This allows Docker to cache the pip install step if requirements haven't changed
+COPY requirements/requirements.txt /app/requirements.txt
+COPY requirements/requirements-dev.txt /app/requirements-dev.txt
+
+# Install Python dependencies
+# --no-cache-dir: Don't cache packages (saves space)
+# --upgrade: Upgrade packages to latest compatible versions
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir -r requirements-dev.txt
+
+# Install additional development tools
+RUN pip install --no-cache-dir \
+    # Development server with hot reload
+    uvicorn[standard] \
+    # Interactive debugging
+    ipdb \
+    pdb++ \
+    # Code formatting and linting
+    black \
+    isort \
+    flake8 \
+    mypy \
+    # Testing tools
+    pytest \
+    pytest-asyncio \
+    pytest-cov \
+    httpx \
+    # Development utilities
+    python-dotenv \
+    # Jupyter for interactive development
+    jupyter \
+    notebook \
+    # Memory profiling
+    memory-profiler \
+    # API testing
+    requests
+
+# Create necessary directories with proper permissions
+RUN mkdir -p /app/src \
+             /app/data \
+             /app/models \
+             /app/downloads \
+             /app/logs \
+             /app/notebooks \
+    && chown -R appuser:appuser /app
+
+# Copy the entire source code
+# In development, we want all files available for hot reload
+COPY --chown=appuser:appuser . /app/
+
+# Create development configuration files if they don't exist
+RUN if [ ! -f /app/.env.dev ]; then \
+        echo "# Development Environment Variables" > /app/.env.dev && \
+        echo "ENVIRONMENT=development" >> /app/.env.dev && \
+        echo "DEBUG=true" >> /app/.env.dev && \
+        echo "LOG_LEVEL=debug" >> /app/.env.dev && \
+        echo "DATABASE_URL=postgresql://stockpred:stockpred123@db:5432/stockpredpro_dev" >> /app/.env.dev && \
+        echo "REDIS_URL=redis://redis:6379/0" >> /app/.env.dev && \
+        echo "SECRET_KEY=dev-secret-key-change-in-production" >> /app/.env.dev && \
+        echo "ALLOWED_HOSTS=*" >> /app/.env.dev; \
+    fi
+
+# Set up Python path to find our modules
+ENV PYTHONPATH="${PYTHONPATH}:/app:/app/src"
+
+# Switch to non-root user
+USER appuser
+
+# Expose ports
+# 8000: FastAPI application
+# 8001: Development/debugging port
+# 8888: Jupyter notebook server
+EXPOSE 8000 8001 8888
+
+# Health check for development
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health/ping || exit 1
+
+# Default command for development with hot reload
+# uvicorn with --reload watches for file changes and restarts automatically
+# --host 0.0.0.0 allows connections from outside the container
+# --port 8000 is our default API port
+# --log-level debug gives us detailed logging
+CMD ["uvicorn", "src.api.main:app", \
+     "--host", "0.0.0.0", \
+     "--port", "8000", \
+     "--reload", \
+     "--reload-dir", "/app/src", \
+     "--log-level", "debug", \
+     "--access-log", \
+     "--use-colors"]
+
+# Alternative commands you can use:
+# 
+# Run with debugger support:
+# CMD ["python", "-m", "debugpy", "--listen", "0.0.0.0:5678", "--wait-for-client", "-m", "uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+#
+# Run Jupyter notebook server:
+# CMD ["jupyter", "notebook", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root", "--NotebookApp.token=''"]
+#
+# Run interactive Python shell:
+# CMD ["python", "-i"]
+#
+# Run with custom environment:
+# CMD ["python", "-c", "import os; os.system('uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload')"]
+
+# ============================================
+# Development Usage Instructions
+# ============================================
+
+# Build the development image:
+# docker build -f Dockerfile.dev -t stockpredpro:dev .
+
+# Run development container:
+# docker run -p 8000:8000 -v $(pwd):/app -e ENVIRONMENT=development stockpredpro:dev
+
+# Run with interactive shell:
+# docker run -it -p 8000:8000 -v $(pwd):/app stockpredpro:dev /bin/bash
+
+# Run Jupyter notebook:
+# docker run -p 8888:8888 -v $(pwd):/app stockpredpro:dev jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root
+
+# Run with debugger:
+# docker run -p 8000:8000 -p 5678:5678 -v $(pwd):/app stockpredpro:dev python -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
+
+# Development Tips:
+# 1. Mount your source code as a volume for hot reload: -v $(pwd):/app
+# 2. Use environment-specific .env files: --env-file .env.dev  
+# 3. Override the default command for different tasks: --entrypoint /bin/bash
+# 4. Access logs: docker logs <container_name> -f
+# 5. Execute commands in running container: docker exec -it <container_name> /bin/bash

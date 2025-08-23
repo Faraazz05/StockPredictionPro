@@ -1,0 +1,524 @@
+# ============================================
+# StockPredictionPro - docker-compose.prod.yml
+# Production-grade multi-service Docker Compose with high availability, security, and monitoring
+# ============================================
+
+version: '3.8'
+
+# ============================================
+# Production Services Stack
+# ============================================
+services:
+
+  # ============================================
+  # FastAPI Application - Multiple Instances
+  # ============================================
+  api-1:
+    build:
+      context: ../../
+      dockerfile: deployment/docker/Dockerfile.prod
+    container_name: stockpred_api_1_prod
+    restart: unless-stopped
+    expose:
+      - "8000"  # Internal port only (behind load balancer)
+    environment: &api-env
+      # Production environment
+      - ENVIRONMENT=production
+      - DEBUG=false
+      - LOG_LEVEL=info
+      - PYTHONPATH=/app/src
+      
+      # Database configuration with connection pooling
+      - DATABASE_URL=postgresql://stockpred_user:${DB_PASSWORD}@db:5432/stockpredpro_prod
+      - DATABASE_POOL_SIZE=20
+      - DATABASE_MAX_OVERFLOW=30
+      - DATABASE_POOL_TIMEOUT=30
+      - DATABASE_POOL_RECYCLE=3600
+      
+      # Redis configuration with high availability
+      - REDIS_URL=redis://redis-master:6379/0
+      - REDIS_SENTINEL_SERVICE=redis-sentinel
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_POOL_SIZE=20
+      
+      # Security configuration
+      - SECRET_KEY=${SECRET_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - JWT_ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+      - REFRESH_TOKEN_EXPIRE_DAYS=7
+      
+      # API Configuration
+      - API_V1_STR=/api/v1
+      - PROJECT_NAME=StockPredictionPro
+      - VERSION=2.0.0
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+      - CORS_ORIGINS=${CORS_ORIGINS}
+      
+      # External API configuration
+      - ALPHA_VANTAGE_API_KEY=${ALPHA_VANTAGE_API_KEY}
+      - YAHOO_FINANCE_API_KEY=${YAHOO_FINANCE_API_KEY}
+      - FRED_API_KEY=${FRED_API_KEY}
+      
+      # Performance and scaling
+      - WORKERS=4
+      - MAX_REQUESTS=1000
+      - MAX_REQUESTS_JITTER=50
+      - TIMEOUT=120
+      - KEEPALIVE=5
+      
+      # Monitoring and logging
+      - SENTRY_DSN=${SENTRY_DSN}
+      - DATADOG_API_KEY=${DATADOG_API_KEY}
+      - NEW_RELIC_LICENSE_KEY=${NEW_RELIC_LICENSE_KEY}
+      
+    volumes:
+      # Mount logs for centralized logging
+      - ./logs/api-1:/app/logs:rw
+      # Mount models directory (shared storage in production)
+      - models_data:/app/models:rw
+      # Mount downloads directory
+      - downloads_data:/app/downloads:rw
+    depends_on:
+      - db
+      - redis-master
+      - redis-sentinel
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - stockpred_internal
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # Second API instance for high availability
+  api-2:
+    build:
+      context: ../../
+      dockerfile: deployment/docker/Dockerfile.prod
+    container_name: stockpred_api_2_prod
+    restart: unless-stopped
+    expose:
+      - "8000"
+    environment: *api-env
+    volumes:
+      - ./logs/api-2:/app/logs:rw
+      - models_data:/app/models:rw
+      - downloads_data:/app/downloads:rw
+    depends_on:
+      - db
+      - redis-master
+      - redis-sentinel
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - stockpred_internal
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # ============================================
+  # PostgreSQL Primary Database
+  # ============================================
+  db:
+    image: postgres:15-alpine
+    container_name: stockpred_db_prod
+    restart: unless-stopped
+    expose:
+      - "5432"
+    environment:
+      # Database configuration
+      - POSTGRES_DB=stockpredpro_prod
+      - POSTGRES_USER=stockpred_user  
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+      
+      # Performance tuning for production
+      - POSTGRES_SHARED_BUFFERS=512MB
+      - POSTGRES_EFFECTIVE_CACHE_SIZE=2GB
+      - POSTGRES_MAINTENANCE_WORK_MEM=128MB
+      - POSTGRES_CHECKPOINT_COMPLETION_TARGET=0.9
+      - POSTGRES_WAL_BUFFERS=32MB
+      - POSTGRES_DEFAULT_STATISTICS_TARGET=100
+      - POSTGRES_RANDOM_PAGE_COST=1.1
+      - POSTGRES_EFFECTIVE_IO_CONCURRENCY=200
+      
+    volumes:
+      # Persistent database storage
+      - postgres_data:/var/lib/postgresql/data
+      # Custom PostgreSQL configuration
+      - ./config/postgresql-prod.conf:/etc/postgresql/postgresql.conf:ro
+      # Database initialization scripts
+      - ./init-scripts:/docker-entrypoint-initdb.d:ro
+      # Database backups
+      - postgres_backups:/backups
+      # WAL archives for point-in-time recovery
+      - postgres_wal_archives:/var/lib/postgresql/wal_archives
+    command: >
+      postgres
+      -c config_file=/etc/postgresql/postgresql.conf
+      -c logging_collector=on
+      -c log_directory=/var/lib/postgresql/data/logs
+      -c log_filename=postgresql-%Y-%m-%d.log
+      -c log_statement=mod
+      -c log_min_duration_statement=1000
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stockpred_user -d stockpredpro_prod"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - stockpred_internal
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
+
+  # ============================================
+  # PostgreSQL Read Replica (Optional)
+  # ============================================
+  db-replica:
+    image: postgres:15-alpine
+    container_name: stockpred_db_replica_prod
+    restart: unless-stopped
+    expose:
+      - "5432"
+    environment:
+      - POSTGRES_DB=stockpredpro_prod
+      - POSTGRES_USER=stockpred_user
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_MASTER_SERVICE=db
+    volumes:
+      - postgres_replica_data:/var/lib/postgresql/data
+      - ./config/postgresql-replica.conf:/etc/postgresql/postgresql.conf:ro
+    depends_on:
+      - db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stockpred_user -d stockpredpro_prod"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - stockpred_internal
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 1.5G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # ============================================
+  # Redis Master (Primary Cache)
+  # ============================================
+  redis-master:
+    image: redis:7-alpine
+    container_name: stockpred_redis_master_prod
+    restart: unless-stopped
+    expose:
+      - "6379"
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    volumes:
+      - redis_master_data:/data
+      - ./config/redis-master.conf:/usr/local/etc/redis/redis.conf:ro
+    command: >
+      redis-server /usr/local/etc/redis/redis.conf
+      --requirepass ${REDIS_PASSWORD}
+      --maxmemory 1gb
+      --maxmemory-policy allkeys-lru
+      --save 900 1 300 10 60 10000
+      --appendonly yes
+      --appendfsync everysec
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - stockpred_internal
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
+        reservations:
+          cpus: '0.2'
+          memory: 256M
+
+  # ============================================
+  # Redis Sentinel (High Availability)
+  # ============================================
+  redis-sentinel:
+    image: redis:7-alpine
+    container_name: stockpred_redis_sentinel_prod
+    restart: unless-stopped
+    expose:
+      - "26379"
+    volumes:
+      - ./config/sentinel.conf:/usr/local/etc/redis/sentinel.conf:ro
+    command: redis-sentinel /usr/local/etc/redis/sentinel.conf
+    depends_on:
+      - redis-master
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "26379", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - stockpred_internal
+
+  # ============================================
+  # Nginx Load Balancer & Reverse Proxy
+  # ============================================
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: stockpred_nginx_prod
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # Nginx configuration
+      - ./nginx-prod.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      # SSL certificates
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      # Static files and uploads
+      - ./nginx/static:/var/www/static:ro
+      - downloads_data:/var/www/downloads:ro
+      # Logs
+      - ./logs/nginx:/var/log/nginx
+    depends_on:
+      - api-1
+      - api-2
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - stockpred_internal
+      - stockpred_external
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+
+  # ============================================
+  # Monitoring Stack
+  # ============================================
+  
+  # Prometheus - Metrics Collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: stockpred_prometheus_prod
+    restart: unless-stopped
+    expose:
+      - "9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/rules:/etc/prometheus/rules:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    networks:
+      - stockpred_internal
+
+  # Grafana - Metrics Visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: stockpred_grafana_prod
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+    networks:
+      - stockpred_internal
+
+  # ============================================
+  # Backup and Maintenance Services
+  # ============================================
+  
+  # Database Backup Service
+  db-backup:
+    image: postgres:15-alpine
+    container_name: stockpred_backup_prod
+    restart: "no"
+    environment:
+      - POSTGRES_DB=stockpredpro_prod
+      - POSTGRES_USER=stockpred_user
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - BACKUP_SCHEDULE=${BACKUP_SCHEDULE:-"0 2 * * *"}  # Daily at 2 AM
+    volumes:
+      - postgres_backups:/backups
+      - ./scripts/backup.sh:/usr/local/bin/backup.sh:ro
+    command: /bin/sh -c "chmod +x /usr/local/bin/backup.sh && crond -f"
+    depends_on:
+      - db
+    networks:
+      - stockpred_internal
+
+# ============================================
+# Named Volumes for Data Persistence
+# ============================================
+volumes:
+  # PostgreSQL data
+  postgres_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/stockpred/data/postgres
+      
+  postgres_replica_data:
+    driver: local
+    
+  postgres_backups:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/stockpred/backups/postgres
+      
+  postgres_wal_archives:
+    driver: local
+    
+  # Redis data
+  redis_master_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/stockpred/data/redis
+      
+  # Application data
+  models_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/stockpred/data/models
+      
+  downloads_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/stockpred/data/downloads
+      
+  # Monitoring data
+  prometheus_data:
+    driver: local
+    
+  grafana_data:
+    driver: local
+
+# ============================================
+# Networks for Service Isolation
+# ============================================
+networks:
+  # Internal network for service-to-service communication
+  stockpred_internal:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+          
+  # External network for public access
+  stockpred_external:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.22.0.0/16
+
+# ============================================
+# Production Deployment Commands
+# ============================================
+
+# Deploy to production:
+# docker-compose -f docker-compose.prod.yml up -d
+
+# Update application (rolling update):
+# docker-compose -f docker-compose.prod.yml up -d --no-deps api-1
+# docker-compose -f docker-compose.prod.yml up -d --no-deps api-2
+
+# Scale API instances:
+# docker-compose -f docker-compose.prod.yml up -d --scale api-1=2 --scale api-2=2
+
+# View logs:
+# docker-compose -f docker-compose.prod.yml logs -f api-1
+
+# Database backup:
+# docker-compose -f docker-compose.prod.yml exec db-backup /usr/local/bin/backup.sh
+
+# Health checks:
+# docker-compose -f docker-compose.prod.yml ps
+# curl -f http://localhost/health
+
+# Monitoring access:
+# Grafana: http://localhost:3000
+# Prometheus: Access via Grafana or internal network
+
+# SSL certificate renewal (if using Let's Encrypt):
+# docker-compose -f docker-compose.prod.yml exec nginx certbot renew
+
+# Clean shutdown:
+# docker-compose -f docker-compose.prod.yml down
+
+# Environment variables required (.env.prod):
+# DB_PASSWORD=secure_db_password_here
+# REDIS_PASSWORD=secure_redis_password_here  
+# SECRET_KEY=your-super-secure-secret-key-here
+# JWT_SECRET_KEY=your-jwt-secret-key-here
+# ALLOWED_HOSTS=yourdomain.com,api.yourdomain.com
+# CORS_ORIGINS=https://yourdomain.com,https://app.yourdomain.com
+# ALPHA_VANTAGE_API_KEY=your_alpha_vantage_key
+# YAHOO_FINANCE_API_KEY=your_yahoo_key
+# FRED_API_KEY=your_fred_key
+# SENTRY_DSN=your_sentry_dsn
+# GRAFANA_ADMIN_PASSWORD=secure_grafana_password
+# BACKUP_SCHEDULE=0 2 * * *

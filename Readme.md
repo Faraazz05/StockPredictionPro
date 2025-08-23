@@ -355,40 +355,6 @@ Security
 
     - Development uses open access. In production, enable auth/rate-limits and CORS policies.
 
--------------------    
-
-### Collaboration Workflow (3 Developers)
-
-Branching
-
-    - main (release), develop (integration), feature/* for tasks, bugfix/* for fixes.
-
-Process
-
-    - Create issues with acceptance criteria; move via Project board (Backlog → In Progress → Review → Done).
-
-Feature dev:
-
-    - git checkout -b feature/short-name
-
-Commit in small, logical increments with clear messages.
-
-Open PR to develop; require review; squash merge.
-
-Code quality
-
-Use pre-commit (black, isort, flake8, YAML checks).
-
-Unit tests run locally before PR; CI pipeline recommended.
-
-Role split
-
-Person A: Data & ML — data fetchers, indicators, regression/classification models, metrics, validation.
-
-Person B: UI/UX & API — Streamlit pages/components, charts, optional API routes, exports.
-
-Person C: Trading & Ops — signals, backtesting, Docker/compose, executable build, logging/governance.
-
 ---------------
 
 ### Configuration
@@ -459,3 +425,80 @@ This project is licensed under the MIT License. See LICENSE for details.
 ### Acknowledgments
 - Streamlit, scikit-learn, Plotly, yfinance and the open-source community.
 - Teammates and reviewers for rapid shipping under tight timelines.
+
+------------
+
+# Cloud-Specific Configurations
+
+This folder structure is prepared for multi-cloud deployments:
+
+- `aws/` - AWS-specific configurations and modules
+- `azure/` - Microsoft Azure configurations  
+- `gcp/` - Google Cloud Platform configurations
+
+## Current Status
+- **Main deployment**: See `/deployment/terraform/` for production AWS infrastructure
+- **Cloud folders**: Empty, ready for future multi-cloud expansion
+
+## When to Use
+- Multi-cloud strategy implementation
+- Cloud-specific feature requirements
+- Alternative deployment strategies
+
+-----------------
+
+inventory/README.md:
+
+
+# Ansible Inventory
+
+This directory is for Ansible inventory files when server-level configuration is needed.
+
+## Current Status
+- **Empty**: Infrastructure is managed via Kubernetes/Terraform
+- **Future Use**: Traditional server management if needed
+
+## When to Use
+- Legacy server management
+- Bare metal deployments  
+- Custom server configurations outside containers
+- Emergency server maintenance
+
+## Structure
+inventory/
+├── production # Production servers
+├── staging # Staging servers
+├── development # Dev servers
+└── group_vars/ # Group variables
+
+
+roles/README.md:
+
+
+# Ansible Roles
+
+This directory contains reusable Ansible roles for server configuration.
+
+## Current Status  
+- **Empty**: Using containerized/Kubernetes approach
+- **Future Use**: Server-level configuration tasks
+
+## When to Use
+- Server baseline configuration
+- Security hardening
+- Monitoring agent deployment
+- Legacy application deployment
+
+## Structure
+Each role should follow Ansible best practices:
+roles/
+└── role_name/
+├── tasks/main.yml # Main tasks
+├── handlers/main.yml # Event handlers
+├── templates/ # Jinja2 templates
+├── files/ # Static files
+├── vars/main.yml # Role variables
+└── defaults/main.yml # Default variables
+
+-------------------------
+

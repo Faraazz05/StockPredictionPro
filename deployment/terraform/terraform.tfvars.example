@@ -1,0 +1,571 @@
+# ============================================
+# StockPredictionPro - terraform.tfvars.example
+# Example Terraform variables file for infrastructure deployment
+# Copy this file to terraform.tfvars and customize the values for your environment
+# ============================================
+
+# ============================================
+# Project Configuration
+# ============================================
+
+# Project identification
+project_name = "stockpredpro"
+project_description = "StockPredictionPro - ML-powered stock prediction and trading signals platform"
+environment = "production"
+owner = "platform-team"
+cost_center = "engineering"
+compliance_tags = {
+  "DataClassification" = "financial"
+  "Compliance"         = "SOX,PCI"
+  "BackupRequired"     = "true"
+}
+
+# Version and deployment info
+application_version = "2.0.0"
+terraform_version = "~> 1.5"
+deployment_date = "2025-08-23"
+
+# ============================================
+# Cloud Provider Configuration
+# ============================================
+
+# AWS Configuration (choose one cloud provider)
+aws_region = "us-west-2"
+aws_availability_zones = ["us-west-2a", "us-west-2b", "us-west-2c"]
+aws_profile = "stockpredpro-production"
+aws_account_id = "123456789012"
+
+# GCP Configuration (alternative)
+# gcp_project_id = "stockpredpro-prod-123456"
+# gcp_region = "us-west2"
+# gcp_zones = ["us-west2-a", "us-west2-b", "us-west2-c"]
+# gcp_credentials_file = "path/to/service-account-key.json"
+
+# Azure Configuration (alternative)
+# azure_subscription_id = "12345678-1234-1234-1234-123456789012"
+# azure_tenant_id = "87654321-4321-4321-4321-210987654321"
+# azure_location = "West US 2"
+# azure_resource_group = "rg-stockpredpro-prod"
+
+# ============================================
+# Network Configuration
+# ============================================
+
+# VPC/Network settings
+vpc_cidr = "10.0.0.0/16"
+vpc_enable_dns_hostnames = true
+vpc_enable_dns_support = true
+vpc_enable_nat_gateway = true
+vpc_single_nat_gateway = false  # Use multiple NAT gateways for HA
+vpc_enable_vpn_gateway = false
+
+# Subnet configuration
+public_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+private_subnet_cidrs = ["10.0.11.0/24", "10.0.12.0/24", "10.0.13.0/24"]
+database_subnet_cidrs = ["10.0.21.0/24", "10.0.22.0/24", "10.0.23.0/24"]
+
+# Security groups and network ACLs
+allowed_cidr_blocks = ["10.0.0.0/16"]  # Internal VPC only
+office_cidr_blocks = ["203.0.113.0/24", "198.51.100.0/24"]  # Replace with your office IPs
+admin_cidr_blocks = ["192.0.2.0/24"]  # Replace with admin access IPs
+
+# ============================================
+# Kubernetes Cluster Configuration
+# ============================================
+
+# EKS/GKE/AKS cluster settings
+kubernetes_version = "1.28"
+cluster_name = "stockpredpro-prod"
+cluster_endpoint_private_access = true
+cluster_endpoint_public_access = true
+cluster_endpoint_public_access_cidrs = ["0.0.0.0/0"]  # Restrict in production
+
+# Node groups configuration
+node_groups = {
+  application = {
+    instance_types = ["t3.large", "t3.xlarge"]
+    scaling_config = {
+      desired_size = 3
+      max_size     = 10
+      min_size     = 2
+    }
+    disk_size = 50
+    capacity_type = "ON_DEMAND"
+    labels = {
+      "node-type" = "application"
+    }
+    taints = []
+  }
+  
+  database = {
+    instance_types = ["r5.large", "r5.xlarge"]
+    scaling_config = {
+      desired_size = 2
+      max_size     = 4
+      min_size     = 1
+    }
+    disk_size = 100
+    capacity_type = "ON_DEMAND"
+    labels = {
+      "node-type" = "database"
+      "storage-type" = "ssd"
+    }
+    taints = [
+      {
+        key    = "database"
+        value  = "postgres"
+        effect = "NO_SCHEDULE"
+      }
+    ]
+  }
+  
+  cache = {
+    instance_types = ["m5.large"]
+    scaling_config = {
+      desired_size = 2
+      max_size     = 4
+      min_size     = 1
+    }
+    disk_size = 30
+    capacity_type = "SPOT"
+    labels = {
+      "node-type" = "cache"
+    }
+    taints = []
+  }
+}
+
+# Cluster add-ons
+cluster_addons = {
+  "coredns" = {
+    version = "v1.10.1-eksbuild.2"
+  }
+  "kube-proxy" = {
+    version = "v1.28.1-eksbuild.1"
+  }
+  "vpc-cni" = {
+    version = "v1.13.4-eksbuild.1"
+  }
+  "aws-ebs-csi-driver" = {
+    version = "v1.21.0-eksbuild.1"
+  }
+}
+
+# ============================================
+# Database Configuration
+# ============================================
+
+# RDS PostgreSQL configuration
+database_engine = "postgres"
+database_engine_version = "15.3"
+database_instance_class = "db.r5.large"
+database_allocated_storage = 100
+database_max_allocated_storage = 1000
+database_storage_encrypted = true
+database_storage_type = "gp3"
+database_iops = 3000
+
+# Database credentials (use AWS Secrets Manager in production)
+database_name = "stockpredpro_prod"
+database_username = "stockpred_admin"
+# database_password = "" # Will be generated automatically
+
+# Database backup and maintenance
+database_backup_retention_period = 30
+database_backup_window = "03:00-04:00"
+database_maintenance_window = "sun:04:00-sun:05:00"
+database_deletion_protection = true
+database_skip_final_snapshot = false
+database_final_snapshot_identifier = "stockpredpro-final-snapshot"
+
+# Read replicas
+database_read_replica_count = 1
+database_read_replica_instance_class = "db.r5.large"
+
+# ============================================
+# Cache Configuration (Redis)
+# ============================================
+
+# ElastiCache Redis configuration
+redis_node_type = "cache.r6g.large"
+redis_num_cache_clusters = 2  # For high availability
+redis_engine_version = "7.0"
+redis_parameter_group_family = "redis7.x"
+redis_port = 6379
+
+# Redis cluster configuration
+redis_automatic_failover_enabled = true
+redis_multi_az_enabled = true
+redis_at_rest_encryption_enabled = true
+redis_transit_encryption_enabled = true
+redis_auth_token_enabled = true
+
+# Redis backup configuration
+redis_snapshot_retention_limit = 7
+redis_snapshot_window = "03:00-05:00"
+redis_maintenance_window = "sun:05:00-sun:07:00"
+
+# ============================================
+# Storage Configuration
+# ============================================
+
+# S3/Cloud Storage configuration
+storage_buckets = {
+  models = {
+    bucket_name = "stockpredpro-models-prod"
+    versioning_enabled = true
+    encryption_enabled = true
+    lifecycle_enabled = true
+    public_access_blocked = true
+  }
+  
+  data = {
+    bucket_name = "stockpredpro-data-prod"
+    versioning_enabled = true
+    encryption_enabled = true
+    lifecycle_enabled = true
+    public_access_blocked = true
+  }
+  
+  backups = {
+    bucket_name = "stockpredpro-backups-prod"
+    versioning_enabled = true
+    encryption_enabled = true
+    lifecycle_enabled = true
+    public_access_blocked = true
+  }
+  
+  logs = {
+    bucket_name = "stockpredpro-logs-prod"
+    versioning_enabled = false
+    encryption_enabled = true
+    lifecycle_enabled = true
+    public_access_blocked = true
+  }
+}
+
+# EFS/Cloud File Storage for shared volumes
+efs_encrypted = true
+efs_performance_mode = "generalPurpose"
+efs_throughput_mode = "provisioned"
+efs_provisioned_throughput_in_mibps = 100
+
+# ============================================
+# Load Balancer Configuration
+# ============================================
+
+# Application Load Balancer
+load_balancer_type = "application"
+load_balancer_internal = false
+load_balancer_enable_deletion_protection = true
+load_balancer_enable_cross_zone_load_balancing = true
+load_balancer_idle_timeout = 60
+
+# SSL/TLS configuration
+ssl_certificate_arn = "arn:aws:acm:us-west-2:123456789012:certificate/12345678-1234-1234-1234-123456789012"
+ssl_policy = "ELBSecurityPolicy-TLS-1-2-2017-01"
+
+# Target group configuration
+target_group_port = 80
+target_group_protocol = "HTTP"
+target_group_health_check_enabled = true
+target_group_health_check_interval = 30
+target_group_health_check_path = "/health/ping"
+target_group_health_check_timeout = 5
+target_group_healthy_threshold = 2
+target_group_unhealthy_threshold = 3
+
+# ============================================
+# DNS Configuration
+# ============================================
+
+# Route53/Cloud DNS configuration
+domain_name = "stockpredpro.com"
+create_hosted_zone = false  # Set to true if you need to create the hosted zone
+hosted_zone_id = "Z1234567890ABC"  # Replace with your hosted zone ID
+
+# DNS records
+dns_records = {
+  api = {
+    name = "api.stockpredpro.com"
+    type = "A"
+    alias = true
+  }
+  
+  www = {
+    name = "www.stockpredpro.com"
+    type = "A"
+    alias = true
+  }
+  
+  monitoring = {
+    name = "monitoring.stockpredpro.com"
+    type = "A"
+    alias = true
+  }
+}
+
+# ============================================
+# Security Configuration
+# ============================================
+
+# KMS encryption
+kms_key_rotation_enabled = true
+kms_key_deletion_window = 30
+kms_key_alias = "alias/stockpredpro-prod"
+
+# Secrets Manager
+secrets = {
+  database_password = {
+    description = "Database master password"
+    generate_random = true
+    random_length = 32
+  }
+  
+  redis_auth_token = {
+    description = "Redis authentication token"
+    generate_random = true
+    random_length = 64
+  }
+  
+  jwt_secret_key = {
+    description = "JWT secret key for API authentication"
+    generate_random = true
+    random_length = 64
+  }
+  
+  api_secret_key = {
+    description = "API secret key"
+    generate_random = true
+    random_length = 32
+  }
+}
+
+# IAM configuration
+create_service_accounts = true
+service_accounts = {
+  api = {
+    name = "stockpredpro-api"
+    namespace = "stockpredpro"
+    annotations = {}
+  }
+  
+  database = {
+    name = "stockpredpro-database"
+    namespace = "stockpredpro"
+    annotations = {}
+  }
+}
+
+# ============================================
+# Monitoring Configuration
+# ============================================
+
+# CloudWatch/Monitoring configuration
+enable_cloudwatch_logs = true
+log_group_retention_days = 30
+enable_container_insights = true
+
+# Prometheus and Grafana
+enable_prometheus = true
+prometheus_namespace = "monitoring"
+prometheus_storage_size = "50Gi"
+prometheus_retention = "30d"
+
+enable_grafana = true
+grafana_admin_password = "change-me-in-production"  # Use secrets in production
+grafana_domain = "monitoring.stockpredpro.com"
+
+# Alerting
+enable_alertmanager = true
+alert_email_recipients = ["alerts@stockpredpro.com", "ops-team@stockpredpro.com"]
+slack_webhook_url = "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"
+
+# ============================================
+# Backup and Disaster Recovery
+# ============================================
+
+# Backup configuration
+backup_schedule = "cron(0 2 * * ? *)"  # Daily at 2 AM
+backup_retention_days = 30
+backup_cross_region_enabled = true
+backup_cross_region_destination = "us-east-1"
+
+# Disaster recovery
+dr_enabled = true
+dr_region = "us-east-1"
+dr_rto_minutes = 60  # Recovery Time Objective
+dr_rpo_minutes = 15  # Recovery Point Objective
+
+# ============================================
+# Cost Optimization
+# ============================================
+
+# Auto Scaling configuration
+enable_cluster_autoscaler = true
+enable_vertical_pod_autoscaler = true
+enable_karpenter = false  # Alternative to cluster autoscaler
+
+# Spot instances
+use_spot_instances = true
+spot_instance_types = ["t3.large", "t3.xlarge", "m5.large", "m5.xlarge"]
+spot_max_price = "0.10"
+
+# Reserved instances
+reserved_instance_types = {
+  "db.r5.large" = {
+    count = 1
+    term = "1yr"
+    payment_option = "partial_upfront"
+  }
+}
+
+# ============================================
+# External Integrations
+# ============================================
+
+# External API keys (use Secrets Manager in production)
+external_apis = {
+  alpha_vantage = {
+    enabled = true
+    secret_name = "stockpredpro/api-keys/alpha-vantage"
+  }
+  
+  yahoo_finance = {
+    enabled = true
+    secret_name = "stockpredpro/api-keys/yahoo-finance"
+  }
+  
+  fred = {
+    enabled = true
+    secret_name = "stockpredpro/api-keys/fred"
+  }
+}
+
+# Third-party services
+sentry_dsn_secret_name = "stockpredpro/monitoring/sentry-dsn"
+datadog_api_key_secret_name = "stockpredpro/monitoring/datadog-api-key"
+
+# ============================================
+# Development and Staging Environments
+# ============================================
+
+# Enable development environment
+create_dev_environment = true
+dev_environment_config = {
+  cluster_name = "stockpredpro-dev"
+  node_instance_types = ["t3.medium"]
+  node_desired_capacity = 1
+  node_max_capacity = 3
+  database_instance_class = "db.t3.micro"
+  redis_node_type = "cache.t3.micro"
+}
+
+# Enable staging environment
+create_staging_environment = true
+staging_environment_config = {
+  cluster_name = "stockpredpro-staging"
+  node_instance_types = ["t3.large"]
+  node_desired_capacity = 2
+  node_max_capacity = 5
+  database_instance_class = "db.t3.small"
+  redis_node_type = "cache.t3.small"
+}
+
+# ============================================
+# Feature Flags
+# ============================================
+
+# Infrastructure feature flags
+enable_waf = true
+enable_shield_advanced = false
+enable_config_rules = true
+enable_cloudtrail = true
+enable_guardduty = true
+enable_security_hub = true
+
+# Application feature flags
+enable_blue_green_deployment = false
+enable_canary_deployment = true
+enable_service_mesh = false  # Istio/Linkerd
+enable_api_gateway = true
+
+# ============================================
+# CI/CD Configuration
+# ============================================
+
+# CI/CD pipeline configuration
+cicd_provider = "github_actions"  # github_actions, gitlab_ci, jenkins
+repository_url = "https://github.com/stockpredpro/infrastructure"
+branch_patterns = {
+  production = ["main", "master"]
+  staging = ["staging", "develop"]
+  development = ["dev/*", "feature/*"]
+}
+
+# Deployment automation
+auto_deploy_enabled = true
+auto_deploy_environments = ["development", "staging"]
+manual_approval_environments = ["production"]
+
+# ============================================
+# Compliance and Governance
+# ============================================
+
+# Compliance requirements
+compliance_frameworks = ["SOX", "PCI-DSS", "SOC2"]
+data_residency_requirements = ["US"]
+audit_logging_required = true
+encryption_at_rest_required = true
+encryption_in_transit_required = true
+
+# Governance policies
+resource_tagging_required = true
+required_tags = ["Environment", "Owner", "CostCenter", "Project"]
+allowed_instance_types = ["t3.*", "m5.*", "r5.*", "c5.*"]
+allowed_regions = ["us-west-2", "us-east-1"]
+
+# ============================================
+# Additional Configuration
+# ============================================
+
+# Time zone configuration
+timezone = "UTC"
+
+# Logging and auditing
+enable_access_logs = true
+enable_flow_logs = true
+log_format = "json"
+
+# Performance monitoring
+enable_x_ray_tracing = true
+enable_enhanced_monitoring = true
+monitoring_interval = 60
+
+# Custom domains and certificates
+custom_domains = [
+  "api.stockpredpro.com",
+  "app.stockpredpro.com", 
+  "dashboard.stockpredpro.com",
+  "monitoring.stockpredpro.com"
+]
+
+# Rate limiting and DDoS protection
+enable_rate_limiting = true
+rate_limit_requests_per_minute = 1000
+enable_ddos_protection = true
+
+# ============================================
+# IMPORTANT NOTES
+# ============================================
+
+# 1. Replace all placeholder values with your actual values
+# 2. Store sensitive information like passwords in AWS Secrets Manager or similar
+# 3. Use different tfvars files for different environments (prod.tfvars, staging.tfvars, dev.tfvars)
+# 4. Never commit actual tfvars files with real credentials to version control
+# 5. Use proper IAM roles and policies for Terraform execution
+# 6. Enable MFA for all administrative access
+# 7. Regularly rotate credentials and API keys
+# 8. Monitor costs and set up billing alerts
+# 9. Test disaster recovery procedures regularly
+# 10. Keep Terraform state files secure and backed up

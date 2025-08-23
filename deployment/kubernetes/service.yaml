@@ -1,0 +1,614 @@
+# ============================================
+# StockPredictionPro - service.yaml
+# Comprehensive Kubernetes services for production deployment with load balancing and service discovery
+# ============================================
+
+# ============================================
+# FastAPI Application Service - ClusterIP
+# ============================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: stockpredpro-api-service
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/instance: production
+    app.kubernetes.io/version: "2.0.0"
+    app.kubernetes.io/component: api-service
+    app.kubernetes.io/part-of: stockpredpro-platform
+    app.kubernetes.io/managed-by: kubectl
+    tier: application
+    environment: production
+    service-type: internal
+  annotations:
+    kubernetes.io/description: "Internal service for StockPredictionPro FastAPI application"
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8001"
+    prometheus.io/path: "/metrics"
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "tcp"
+spec:
+  type: ClusterIP
+  sessionAffinity: None  # Round-robin load balancing
+  
+  ports:
+  # HTTP API port
+  - name: http
+    port: 80
+    targetPort: http
+    protocol: TCP
+  
+  # HTTPS API port
+  - name: https
+    port: 443
+    targetPort: http  # Terminated at ingress
+    protocol: TCP
+  
+  # Metrics port for monitoring
+  - name: metrics
+    port: 8001
+    targetPort: metrics
+    protocol: TCP
+  
+  selector:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: api
+    tier: application
+
+---
+# ============================================
+# FastAPI Application Service - LoadBalancer (External Access)
+# ============================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: stockpredpro-api-external-service
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: api-service-external
+    tier: application
+    environment: production
+    service-type: external
+  annotations:
+    kubernetes.io/description: "External LoadBalancer service for StockPredictionPro API"
+    # AWS Load Balancer Controller annotations
+    service.beta.kubernetes.io/aws-load-balancer-type: "external"
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+    service.beta.kubernetes.io/aws-load-balancer-attributes: "load_balancing.cross_zone.enabled=true"
+    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "arn:aws:acm:us-west-2:123456789012:certificate/12345678-1234-1234-1234-123456789012"
+    service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "https"
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "http"
+    # GCP Load Balancer annotations
+    cloud.google.com/neg: '{"ingress": true}'
+    cloud.google.com/load-balancer-type: "External"
+    # Azure Load Balancer annotations
+    service.beta.kubernetes.io/azure-load-balancer-internal: "false"
+spec:
+  type: LoadBalancer
+  sessionAffinity: ClientIP  # Sticky sessions for external clients
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 3600  # 1 hour session timeout
+  
+  ports:
+  # HTTP port (will redirect to HTTPS)
+  - name: http
+    port: 80
+    targetPort: http
+    protocol: TCP
+  
+  # HTTPS port (SSL terminated at load balancer)
+  - name: https
+    port: 443
+    targetPort: http
+    protocol: TCP
+  
+  selector:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: api
+    tier: application
+  
+  # External IP configuration (cloud-specific)
+  loadBalancerSourceRanges:
+  - 0.0.0.0/0  # Allow all IPs (restrict in production)
+
+---
+# ============================================
+# PostgreSQL Database Service
+# ============================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: stockpredpro-postgres-service
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/instance: production
+    app.kubernetes.io/component: database-service
+    app.kubernetes.io/part-of: stockpredpro-platform
+    tier: database
+    environment: production
+    service-type: internal
+  annotations:
+    kubernetes.io/description: "Internal service for StockPredictionPro PostgreSQL database"
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9187"
+    prometheus.io/path: "/metrics"
+spec:
+  type: ClusterIP  # Internal only - no external access
+  
+  ports:
+  # PostgreSQL port
+  - name: postgres
+    port: 5432
+    targetPort: postgres
+    protocol: TCP
+  
+  # PostgreSQL exporter metrics
+  - name: metrics
+    port: 9187
+    targetPort: metrics
+    protocol: TCP
+  
+  selector:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: database
+    tier: database
+
+---
+# ============================================
+# PostgreSQL Read Replica Service
+# ============================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: stockpredpro-postgres-read-service
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: database-read-service
+    tier: database
+    environment: production
+    service-type: internal
+  annotations:
+    kubernetes.io/description: "Read-only service for PostgreSQL read replicas"
+spec:
+  type: ClusterIP
+  
+  ports:
+  - name: postgres
+    port: 5432
+    targetPort: postgres
+    protocol: TCP
+  
+  selector:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: database-replica
+    tier: database
+
+---
+# ============================================
+# Redis Cache Service
+# ============================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: stockpredpro-redis-service
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/instance: production
+    app.kubernetes.io/component: cache-service
+    app.kubernetes.io/part-of: stockpredpro-platform
+    tier: cache
+    environment: production
+    service-type: internal
+  annotations:
+    kubernetes.io/description: "Internal service for StockPredictionPro Redis cache"
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9121"
+    prometheus.io/path: "/metrics"
+spec:
+  type: ClusterIP  # Internal only
+  
+  ports:
+  # Redis port
+  - name: redis
+    port: 6379
+    targetPort: redis
+    protocol: TCP
+  
+  # Redis exporter metrics
+  - name: metrics
+    port: 9121
+    targetPort: metrics
+    protocol: TCP
+  
+  selector:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: cache
+    tier: cache
+
+---
+# ============================================
+# Redis Sentinel Service (High Availability)
+# ============================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: stockpredpro-redis-sentinel-service
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: redis-sentinel-service
+    tier: cache
+    environment: production
+  annotations:
+    kubernetes.io/description: "Redis Sentinel service for high availability"
+spec:
+  type: ClusterIP
+  
+  ports:
+  - name: sentinel
+    port: 26379
+    targetPort: 26379
+    protocol: TCP
+  
+  selector:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: redis-sentinel
+
+---
+# ============================================
+# Nginx Reverse Proxy Service
+# ============================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: stockpredpro-nginx-service
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: nginx-service
+    tier: proxy
+    environment: production
+    service-type: internal
+  annotations:
+    kubernetes.io/description: "Internal Nginx reverse proxy service"
+spec:
+  type: ClusterIP
+  
+  ports:
+  # HTTP port
+  - name: http
+    port: 80
+    targetPort: 80
+    protocol: TCP
+  
+  # HTTPS port
+  - name: https
+    port: 443
+    targetPort: 443
+    protocol: TCP
+  
+  # Nginx status/metrics
+  - name: metrics
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  
+  selector:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: nginx
+
+---
+# ============================================
+# Headless Service for StatefulSet (if using StatefulSet for database)
+# ============================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: stockpredpro-postgres-headless
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: database-headless
+    tier: database
+    environment: production
+  annotations:
+    kubernetes.io/description: "Headless service for PostgreSQL StatefulSet"
+    service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
+spec:
+  type: ClusterIP
+  clusterIP: None  # Headless service
+  
+  ports:
+  - name: postgres
+    port: 5432
+    targetPort: postgres
+    protocol: TCP
+  
+  selector:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: database
+    tier: database
+  
+  # Publish not ready addresses for StatefulSet
+  publishNotReadyAddresses: true
+
+---
+# ============================================
+# Monitoring Services
+# ============================================
+
+# Prometheus Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: stockpredpro-prometheus-service
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: prometheus-service
+    tier: monitoring
+    environment: production
+  annotations:
+    kubernetes.io/description: "Prometheus monitoring service"
+spec:
+  type: ClusterIP
+  
+  ports:
+  - name: web
+    port: 9090
+    targetPort: 9090
+    protocol: TCP
+  
+  selector:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/component: server
+
+---
+# Grafana Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: stockpredpro-grafana-service
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: grafana-service
+    tier: monitoring
+    environment: production
+  annotations:
+    kubernetes.io/description: "Grafana dashboard service"
+spec:
+  type: ClusterIP
+  
+  ports:
+  - name: web
+    port: 3000
+    targetPort: 3000
+    protocol: TCP
+  
+  selector:
+    app.kubernetes.io/name: grafana
+
+---
+# ============================================
+# Development Environment Services
+# ============================================
+
+# Development API Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: stockpredpro-api-dev-service
+  namespace: stockpredpro-dev
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/instance: development
+    app.kubernetes.io/component: api-service
+    tier: application
+    environment: development
+  annotations:
+    kubernetes.io/description: "Development API service with debugging enabled"
+spec:
+  type: LoadBalancer  # External access for development
+  
+  ports:
+  # HTTP API port
+  - name: http
+    port: 80
+    targetPort: 8000
+    protocol: TCP
+  
+  # Debug port for IDE attachment
+  - name: debug
+    port: 5678
+    targetPort: 5678
+    protocol: TCP
+  
+  # Jupyter notebook port
+  - name: jupyter
+    port: 8888
+    targetPort: 8888
+    protocol: TCP
+  
+  selector:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: api
+    tier: application
+    environment: development
+
+---
+# Development Database Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: stockpredpro-postgres-dev-service
+  namespace: stockpredpro-dev
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: database-service
+    tier: database
+    environment: development
+spec:
+  type: ClusterIP
+  
+  ports:
+  - name: postgres
+    port: 5432
+    targetPort: 5432
+    protocol: TCP
+  
+  selector:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: database
+    tier: database
+    environment: development
+
+---
+# Development Redis Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: stockpredpro-redis-dev-service
+  namespace: stockpredpro-dev
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: cache-service
+    tier: cache
+    environment: development
+spec:
+  type: ClusterIP
+  
+  ports:
+  - name: redis
+    port: 6379
+    targetPort: 6379
+    protocol: TCP
+  
+  selector:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: cache
+    tier: cache
+    environment: development
+
+---
+# ============================================
+# Service Monitor for Prometheus (if using Prometheus Operator)
+# ============================================
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: stockpredpro-api-monitor
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: service-monitor
+    environment: production
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: stockpredpro
+      app.kubernetes.io/component: api-service
+  
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
+    honorLabels: true
+    scrapeTimeout: 10s
+  
+  namespaceSelector:
+    matchNames:
+    - stockpredpro
+
+---
+# Database ServiceMonitor
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: stockpredpro-postgres-monitor
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: database-monitor
+    environment: production
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: stockpredpro
+      app.kubernetes.io/component: database-service
+  
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
+    scrapeTimeout: 10s
+
+---
+# Redis ServiceMonitor
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: stockpredpro-redis-monitor
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: cache-monitor
+    environment: production
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: stockpredpro
+      app.kubernetes.io/component: cache-service
+  
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
+    scrapeTimeout: 10s
+
+---
+# ============================================
+# Endpoints for External Services (if needed)
+# ============================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: external-database-service
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: external-database
+    service-type: external
+spec:
+  type: ExternalName
+  externalName: stockpredpro-db.cluster-xyz.us-west-2.rds.amazonaws.com
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
+
+---
+# External Redis Service (ElastiCache, etc.)
+apiVersion: v1
+kind: Service
+metadata:
+  name: external-redis-service
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: external-cache
+    service-type: external
+spec:
+  type: ExternalName
+  externalName: stockpredpro-cache.xyz123.cache.amazonaws.com
+  ports:
+  - port: 6379
+    targetPort: 6379
+    protocol: TCP

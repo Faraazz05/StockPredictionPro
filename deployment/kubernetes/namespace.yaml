@@ -1,0 +1,486 @@
+# ============================================
+# StockPredictionPro - namespace.yaml
+# Kubernetes namespace configuration with resource quotas, network policies, and RBAC
+# ============================================
+
+# Main application namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/instance: production
+    app.kubernetes.io/version: "2.0.0"
+    app.kubernetes.io/component: namespace
+    app.kubernetes.io/part-of: stockpredpro-platform
+    app.kubernetes.io/managed-by: kubectl
+    environment: production
+    team: platform
+    cost-center: engineering
+    compliance: financial-data
+  annotations:
+    kubernetes.io/description: "StockPredictionPro production namespace for ML-powered stock prediction and trading signals platform"
+    kubernetes.io/managed-by: "platform-team"
+    contact: "platform-team@stockpredpro.com"
+    documentation: "https://docs.stockpredpro.com/deployment/kubernetes"
+    version: "2.0.0"
+    created-by: "infrastructure-as-code"
+    last-updated: "2025-08-23"
+
+---
+# Development namespace for testing and development
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: stockpredpro-dev
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/instance: development
+    app.kubernetes.io/version: "2.0.0-dev"
+    app.kubernetes.io/component: namespace
+    app.kubernetes.io/part-of: stockpredpro-platform
+    app.kubernetes.io/managed-by: kubectl
+    environment: development
+    team: platform
+    cost-center: engineering
+  annotations:
+    kubernetes.io/description: "StockPredictionPro development namespace for testing and development"
+    kubernetes.io/managed-by: "platform-team"
+    contact: "dev-team@stockpredpro.com"
+    version: "2.0.0-dev"
+
+---
+# Staging namespace for pre-production testing
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: stockpredpro-staging
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/instance: staging
+    app.kubernetes.io/version: "2.0.0-rc"
+    app.kubernetes.io/component: namespace
+    app.kubernetes.io/part-of: stockpredpro-platform
+    app.kubernetes.io/managed-by: kubectl
+    environment: staging
+    team: platform
+    cost-center: engineering
+  annotations:
+    kubernetes.io/description: "StockPredictionPro staging namespace for pre-production testing"
+    kubernetes.io/managed-by: "platform-team"
+    contact: "qa-team@stockpredpro.com"
+    version: "2.0.0-rc"
+
+---
+# ============================================
+# Resource Quotas for Production Namespace
+# ============================================
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: stockpredpro-resource-quota
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: resource-quota
+    environment: production
+spec:
+  hard:
+    # Compute Resources
+    requests.cpu: "8"          # Total CPU requests
+    requests.memory: 16Gi      # Total memory requests
+    limits.cpu: "16"           # Total CPU limits
+    limits.memory: 32Gi        # Total memory limits
+    
+    # Storage Resources
+    requests.storage: 100Gi    # Total storage requests
+    persistentvolumeclaims: "10" # Max PVCs
+    
+    # Object Count Limits
+    pods: "50"                 # Max pods
+    services: "20"             # Max services
+    secrets: "30"              # Max secrets
+    configmaps: "30"           # Max configmaps
+    replicationcontrollers: "10" # Max replication controllers
+    deployments.apps: "20"     # Max deployments
+    statefulsets.apps: "5"     # Max stateful sets
+    jobs.batch: "10"           # Max jobs
+    cronjobs.batch: "5"        # Max cron jobs
+    
+    # Network Resources
+    services.nodeports: "5"    # Max NodePort services
+    services.loadbalancers: "3" # Max LoadBalancer services
+
+---
+# Resource Quotas for Development Namespace (smaller limits)
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: stockpredpro-dev-resource-quota
+  namespace: stockpredpro-dev
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: resource-quota
+    environment: development
+spec:
+  hard:
+    # Compute Resources (reduced for dev)
+    requests.cpu: "4"
+    requests.memory: 8Gi
+    limits.cpu: "8"
+    limits.memory: 16Gi
+    
+    # Storage Resources
+    requests.storage: 50Gi
+    persistentvolumeclaims: "5"
+    
+    # Object Count Limits
+    pods: "20"
+    services: "10"
+    secrets: "15"
+    configmaps: "15"
+    deployments.apps: "10"
+    statefulsets.apps: "3"
+
+---
+# Resource Quotas for Staging Namespace (medium limits)
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: stockpredpro-staging-resource-quota
+  namespace: stockpredpro-staging
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: resource-quota
+    environment: staging
+spec:
+  hard:
+    # Compute Resources (between dev and prod)
+    requests.cpu: "6"
+    requests.memory: 12Gi
+    limits.cpu: "12"
+    limits.memory: 24Gi
+    
+    # Storage Resources
+    requests.storage: 75Gi
+    persistentvolumeclaims: "7"
+    
+    # Object Count Limits
+    pods: "30"
+    services: "15"
+    secrets: "20"
+    configmaps: "20"
+    deployments.apps: "15"
+    statefulsets.apps: "4"
+
+---
+# ============================================
+# Limit Ranges for Resource Constraints
+# ============================================
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: stockpredpro-limit-range
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: limit-range
+    environment: production
+spec:
+  limits:
+  # Pod-level limits
+  - type: Pod
+    max:
+      cpu: "4"        # Max CPU per pod
+      memory: 8Gi     # Max memory per pod
+    min:
+      cpu: 10m        # Min CPU per pod
+      memory: 10Mi    # Min memory per pod
+      
+  # Container-level limits
+  - type: Container
+    default:          # Default limits if not specified
+      cpu: 500m
+      memory: 1Gi
+    defaultRequest:   # Default requests if not specified
+      cpu: 100m
+      memory: 256Mi
+    max:             # Maximum limits per container
+      cpu: "2"
+      memory: 4Gi
+    min:             # Minimum requests per container
+      cpu: 10m
+      memory: 10Mi
+      
+  # Persistent Volume Claims
+  - type: PersistentVolumeClaim
+    max:
+      storage: 50Gi  # Max storage per PVC
+    min:
+      storage: 1Gi   # Min storage per PVC
+
+---
+# Development LimitRange (more restrictive)
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: stockpredpro-dev-limit-range
+  namespace: stockpredpro-dev
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: limit-range
+    environment: development
+spec:
+  limits:
+  - type: Pod
+    max:
+      cpu: "2"
+      memory: 4Gi
+    min:
+      cpu: 10m
+      memory: 10Mi
+  - type: Container
+    default:
+      cpu: 200m
+      memory: 512Mi
+    defaultRequest:
+      cpu: 50m
+      memory: 128Mi
+    max:
+      cpu: "1"
+      memory: 2Gi
+    min:
+      cpu: 10m
+      memory: 10Mi
+  - type: PersistentVolumeClaim
+    max:
+      storage: 20Gi
+    min:
+      storage: 1Gi
+
+---
+# ============================================
+# Network Policies for Security Isolation
+# ============================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: stockpredpro-network-policy
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: network-policy
+    environment: production
+spec:
+  podSelector: {}  # Apply to all pods in the namespace
+  policyTypes:
+  - Ingress
+  - Egress
+  
+  ingress:
+  # Allow ingress from ingress controllers
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    - namespaceSelector:
+        matchLabels:
+          name: istio-system
+    ports:
+    - protocol: TCP
+      port: 8000  # API port
+      
+  # Allow ingress from monitoring namespace
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 8000  # Metrics scraping
+      
+  # Allow internal communication within namespace
+  - from:
+    - podSelector: {}
+    
+  egress:
+  # Allow egress to DNS
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+      
+  # Allow egress to external APIs (financial data)
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443  # HTTPS
+    - protocol: TCP
+      port: 80   # HTTP
+      
+  # Allow egress to databases and services
+  - to:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/component: database
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/component: cache
+    ports:
+    - protocol: TCP
+      port: 5432  # PostgreSQL
+    - protocol: TCP
+      port: 6379  # Redis
+
+---
+# Development Network Policy (more permissive)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: stockpredpro-dev-network-policy
+  namespace: stockpredpro-dev
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: network-policy
+    environment: development
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  
+  ingress:
+  # More permissive for development
+  - from: []
+    ports:
+    - protocol: TCP
+      port: 8000
+      
+  egress:
+  # Allow all egress for development
+  - to: []
+
+---
+# ============================================
+# Priority Classes for Workload Scheduling
+# ============================================
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: stockpredpro-critical
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: priority-class
+value: 1000000  # High priority
+globalDefault: false
+description: "Critical StockPredictionPro components that must be scheduled first"
+
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: stockpredpro-high
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: priority-class
+value: 100000   # High priority
+globalDefault: false
+description: "High priority StockPredictionPro components"
+
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: stockpredpro-normal
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: priority-class
+value: 1000     # Normal priority
+globalDefault: false
+description: "Normal priority StockPredictionPro components"
+
+---
+# ============================================
+# Pod Security Policy (if PSP is enabled)
+# ============================================
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: stockpredpro-psp
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: pod-security-policy
+spec:
+  privileged: false  # Don't allow privileged containers
+  allowPrivilegeEscalation: false
+  
+  # Required security context
+  requiredDropCapabilities:
+    - ALL
+  allowedCapabilities: []  # No capabilities allowed
+  
+  # Volume restrictions
+  volumes:
+    - 'configMap'
+    - 'emptyDir'
+    - 'projected'
+    - 'secret'
+    - 'downwardAPI'
+    - 'persistentVolumeClaim'
+    
+  # Host restrictions
+  hostNetwork: false
+  hostIPC: false
+  hostPID: false
+  
+  # User restrictions
+  runAsUser:
+    rule: 'MustRunAsNonRoot'
+  runAsGroup:
+    rule: 'MustRunAs'
+    ranges:
+      - min: 1
+        max: 65535
+  fsGroup:
+    rule: 'RunAsAny'
+    
+  # SELinux
+  seLinux:
+    rule: 'RunAsAny'
+
+---
+# ============================================
+# Service Account for Application
+# ============================================
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: stockpredpro-service-account
+  namespace: stockpredpro
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: service-account
+    environment: production
+  annotations:
+    # For workload identity (GKE) or IAM roles (EKS)
+    iam.gke.io/gcp-service-account: stockpredpro@project.iam.gserviceaccount.com
+    eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/stockpredpro-role
+automountServiceAccountToken: true
+imagePullSecrets:
+- name: stockpredpro-registry-secret
+
+---
+# Development Service Account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: stockpredpro-dev-service-account
+  namespace: stockpredpro-dev
+  labels:
+    app.kubernetes.io/name: stockpredpro
+    app.kubernetes.io/component: service-account
+    environment: development
+automountServiceAccountToken: true

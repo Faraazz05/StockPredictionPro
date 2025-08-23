@@ -1,0 +1,49 @@
+Technical Indicators Feature List
+========================================
+
+ 1. ATR_14
+ 2. ATR_ratio
+ 3. BB_breakout_lower
+ 4. BB_breakout_upper
+ 5. BB_lower
+ 6. BB_middle
+ 7. BB_position
+ 8. BB_squeeze
+ 9. BB_upper
+10. BB_width
+11. CCI_20
+12. Close_to_Close_Volatility
+13. EMA_12
+14. EMA_26
+15. EMA_50
+16. MACD
+17. MACD_bearish_crossover
+18. MACD_bullish_crossover
+19. MACD_histogram
+20. MACD_signal
+21. MFI_14
+22. Price_Range
+23. Price_Range_Pct
+24. ROC_10
+25. RSI_14
+26. RSI_21
+27. RSI_overbought
+28. RSI_oversold
+29. SMA_10
+30. SMA_20
+31. SMA_200
+32. SMA_5
+33. SMA_50
+34. SMA_ratio_20_50
+35. SMA_ratio_5_20
+36. Stoch_D
+37. Stoch_K
+38. Stoch_bearish_crossover
+39. Stoch_bullish_crossover
+40. Stoch_overbought
+41. Stoch_oversold
+42. True_Range
+43. Ultimate_Oscillator
+44. VWAP
+45. Volatility_Breakout
+46. Williams_R

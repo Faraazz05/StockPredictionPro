@@ -1,0 +1,292 @@
+Time-Series Features List
+==================================================
+
+Generated on: 2025-08-24 01:37:54
+Total features: 253
+Dataset shape: (850, 253)
+
+
+LAG FEATURES (57 features):
+----------------------------------------
+  1. close_lag_1
+  2. close_lag_2
+  3. close_lag_3
+  4. close_lag_5
+  5. close_lag_7
+  6. close_lag_10
+  7. close_lag_15
+  8. close_lag_20
+  9. close_lag_30
+ 10. open_lag_1
+ 11. open_lag_2
+ 12. open_lag_3
+ 13. open_lag_5
+ 14. open_lag_7
+ 15. open_lag_10
+ 16. open_lag_15
+ 17. open_lag_20
+ 18. open_lag_30
+ 19. high_lag_1
+ 20. high_lag_2
+ 21. high_lag_3
+ 22. high_lag_5
+ 23. high_lag_7
+ 24. high_lag_10
+ 25. high_lag_15
+ 26. high_lag_20
+ 27. high_lag_30
+ 28. low_lag_1
+ 29. low_lag_2
+ 30. low_lag_3
+ 31. low_lag_5
+ 32. low_lag_7
+ 33. low_lag_10
+ 34. low_lag_15
+ 35. low_lag_20
+ 36. low_lag_30
+ 37. volume_lag_1
+ 38. volume_lag_2
+ 39. volume_lag_3
+ 40. volume_lag_5
+ 41. volume_lag_7
+ 42. volume_lag_10
+ 43. volume_lag_15
+ 44. volume_lag_20
+ 45. volume_lag_30
+ 46. return_lag_1
+ 47. log_return_lag_1
+ 48. return_lag_2
+ 49. log_return_lag_2
+ 50. return_lag_3
+ 51. log_return_lag_3
+ 52. return_lag_5
+ 53. log_return_lag_5
+ 54. return_lag_7
+ 55. log_return_lag_7
+ 56. return_lag_10
+ 57. log_return_lag_10
+
+ROLLING FEATURES (75 features):
+----------------------------------------
+  1. close_rollmean_3
+  2. close_rollstd_3
+  3. close_rollmin_3
+  4. close_rollmax_3
+  5. close_rollposition_3
+  6. close_rollmean_5
+  7. close_rollstd_5
+  8. close_rollmin_5
+  9. close_rollmax_5
+ 10. close_rollposition_5
+ 11. close_rollmean_7
+ 12. close_rollstd_7
+ 13. close_rollmin_7
+ 14. close_rollmax_7
+ 15. close_rollposition_7
+ 16. close_rollmean_10
+ 17. close_rollstd_10
+ 18. close_rollmin_10
+ 19. close_rollmax_10
+ 20. close_rollposition_10
+ 21. close_rollmean_15
+ 22. close_rollstd_15
+ 23. close_rollmin_15
+ 24. close_rollmax_15
+ 25. close_rollposition_15
+ 26. close_rollmean_20
+ 27. close_rollstd_20
+ 28. close_rollmin_20
+ 29. close_rollmax_20
+ 30. close_rollposition_20
+ 31. close_rollmean_30
+ 32. close_rollstd_30
+ 33. close_rollmin_30
+ 34. close_rollmax_30
+ 35. close_rollposition_30
+ 36. close_rollmean_50
+ 37. close_rollstd_50
+ 38. close_rollmin_50
+ 39. close_rollmax_50
+ 40. close_rollposition_50
+ 41. close_rollmean_100
+ 42. close_rollstd_100
+ 43. close_rollmin_100
+ 44. close_rollmax_100
+ 45. close_rollposition_100
+ 46. volume_rollmean_3
+ 47. volume_rollstd_3
+ 48. volume_rollmean_5
+ 49. volume_rollstd_5
+ 50. volume_rollmean_7
+ 51. volume_rollstd_7
+ 52. volume_rollmean_10
+ 53. volume_rollstd_10
+ 54. volume_rollmean_15
+ 55. volume_rollstd_15
+ 56. volume_rollmean_20
+ 57. volume_rollstd_20
+ 58. return_rollmean_3
+ 59. return_rollstd_3
+ 60. return_rollmean_5
+ 61. return_rollstd_5
+ 62. return_rollmean_7
+ 63. return_rollstd_7
+ 64. return_rollmean_10
+ 65. return_rollstd_10
+ 66. return_rollmean_15
+ 67. return_rollstd_15
+ 68. return_rollmean_20
+ 69. return_rollstd_20
+ 70. close_rollq25_10
+ 71. close_rollq75_10
+ 72. close_rollq25_20
+ 73. close_rollq75_20
+ 74. close_rollq25_50
+ 75. close_rollq75_50
+
+EWMA FEATURES (42 features):
+----------------------------------------
+  1. close_ewm_alpha_0.5
+  2. close_ewm_std_0.5
+  3. close_ewm_alpha_0.7
+  4. close_ewm_std_0.7
+  5. close_ewm_alpha_0.3
+  6. close_ewm_std_0.3
+  7. close_ewm_alpha_0.4
+  8. close_ewm_std_0.4
+  9. close_ewm_alpha_0.1
+ 10. close_ewm_std_0.1
+ 11. close_ewm_alpha_0.2
+ 12. close_ewm_std_0.2
+ 13. volume_ewm_alpha_0.5
+ 14. volume_ewm_ratio_0.5
+ 15. volume_ewm_alpha_0.7
+ 16. volume_ewm_ratio_0.7
+ 17. volume_ewm_alpha_0.3
+ 18. volume_ewm_ratio_0.3
+ 19. volume_ewm_alpha_0.4
+ 20. volume_ewm_ratio_0.4
+ 21. return_ewm_mean_0.5
+ 22. return_ewm_std_0.5
+ 23. return_ewm_mean_0.7
+ 24. return_ewm_std_0.7
+ 25. return_ewm_mean_0.3
+ 26. return_ewm_std_0.3
+ 27. return_ewm_mean_0.4
+ 28. return_ewm_std_0.4
+ 29. return_ewm_mean_0.1
+ 30. return_ewm_std_0.1
+ 31. return_ewm_mean_0.2
+ 32. return_ewm_std_0.2
+ 33. close_ewm_span_5
+ 34. return_ewm_vol_span_5
+ 35. close_ewm_span_10
+ 36. return_ewm_vol_span_10
+ 37. close_ewm_span_20
+ 38. return_ewm_vol_span_20
+ 39. close_ewm_span_50
+ 40. return_ewm_vol_span_50
+ 41. ewma_signal_fast_slow
+ 42. ewma_price_position
+
+DATETIME FEATURES (24 features):
+----------------------------------------
+  1. year
+  2. month
+  3. quarter
+  4. day
+  5. dayofweek
+  6. dayofyear
+  7. week_of_year
+  8. is_monday
+  9. is_friday
+ 10. is_weekend
+ 11. is_month_start
+ 12. is_month_end
+ 13. is_quarter_start
+ 14. is_quarter_end
+ 15. month_sin
+ 16. month_cos
+ 17. dayofweek_sin
+ 18. dayofweek_cos
+ 19. dayofyear_sin
+ 20. dayofyear_cos
+ 21. days_since_epoch
+ 22. months_since_epoch
+ 23. near_holiday
+ 24. is_trading_day
+
+VOLATILITY FEATURES (36 features):
+----------------------------------------
+  1. return_ewm_vol_span_5
+  2. return_ewm_vol_span_10
+  3. return_ewm_vol_span_20
+  4. return_ewm_vol_span_50
+  5. volatility_5
+  6. volatility_annualized_5
+  7. parkinson_vol_5
+  8. volatility_10
+  9. volatility_annualized_10
+ 10. parkinson_vol_10
+ 11. volatility_20
+ 12. volatility_annualized_20
+ 13. parkinson_vol_20
+ 14. volatility_50
+ 15. volatility_annualized_50
+ 16. parkinson_vol_50
+ 17. garman_klass_vol_10
+ 18. garman_klass_vol_20
+ 19. rogers_satchell_vol_10
+ 20. rogers_satchell_vol_20
+ 21. vol_ratio_5_20
+ 22. vol_ratio_10_50
+ 23. vol_percentile_20
+ 24. vol_percentile_50
+ 25. var_95_20
+ 26. var_99_20
+ 27. cvar_95_20
+ 28. var_95_50
+ 29. var_99_50
+ 30. cvar_95_50
+ 31. downside_deviation_20
+ 32. downside_deviation_50
+ 33. max_drawdown_20
+ 34. max_drawdown_50
+ 35. vol_regime_high
+ 36. vol_regime_low
+
+RETURN FEATURES (8 features):
+----------------------------------------
+  1. daily_return
+  2. log_return
+  3. return_sharpe_3
+  4. return_sharpe_5
+  5. return_sharpe_7
+  6. return_sharpe_10
+  7. return_sharpe_15
+  8. return_sharpe_20
+
+DIFFERENCE FEATURES (6 features):
+----------------------------------------
+  1. price_diff_1
+  2. price_diff_pct_1
+  3. price_diff_5
+  4. price_diff_pct_5
+  5. price_diff_10
+  6. price_diff_pct_10
+
+SIGNAL FEATURES (13 features):
+----------------------------------------
+  1. close_rollposition_3
+  2. close_rollposition_5
+  3. close_rollposition_7
+  4. close_rollposition_10
+  5. close_rollposition_15
+  6. close_rollposition_20
+  7. close_rollposition_30
+  8. close_rollposition_50
+  9. close_rollposition_100
+ 10. ewma_signal_fast_slow
+ 11. ewma_price_position
+ 12. vol_regime_high
+ 13. vol_regime_low

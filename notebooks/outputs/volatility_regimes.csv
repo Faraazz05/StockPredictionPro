@@ -1,0 +1,6 @@
+,returns,returns,returns,volatility_21d,volatility_21d
+,count,mean,std,mean,std
+volatility_regime,,,,,
+High,495,0.000792,0.016703,0.267253,0.02667
+Low,495,0.000719,0.009294,0.148968,0.018677
+Medium,508,-0.000111,0.01283,0.20799,0.015942

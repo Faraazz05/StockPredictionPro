@@ -1,0 +1,2 @@
+analysis_date,backtest_period,total_trading_days,strategies_tested,total_return,benchmark_return,excess_return,sharpe_ratio,max_drawdown,total_trades,win_rate
+2025-08-24 19:34:02,2022-01-02 to 2024-01-20,749,4,0.031810642013061496,2.73846669912093,-2.7066560571078684,1.4176465471920934,-0.011712425893212065,13,0.5

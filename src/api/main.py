@@ -47,13 +47,16 @@ from .exceptions import (
     RateLimitException
 )
 from ..utils.logger import get_logger, setup_logging
-from ..config.settings import get_settings
+from src.utils.config_loader import load_app_config
 
-# Get logger
-logger = get_logger('api.main')
+# Initialize logging
+logger = get_logger("api.main")
+
+# Load application config
+config = load_app_config()
 
 # Get settings
-settings = get_settings()
+settings = config.settings
 
 # ============================================
 # Application Lifespan Management

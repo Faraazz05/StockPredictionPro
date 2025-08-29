@@ -1,0 +1,597 @@
+/*
+custom.css
+
+Custom CSS styles for StockPredictionPro Streamlit application.
+Provides enhanced styling, animations, and responsive design
+for a professional financial data visualization experience.
+
+Author: StockPredictionPro Team
+Date: August 2025
+*/
+
+/* ============================================
+   GLOBAL STYLES & VARIABLES
+   ============================================ */
+
+:root {
+  --primary-blue: #0052cc;
+  --primary-teal: #00b894;
+  --success-green: #28a745;
+  --danger-red: #e17055;
+  --warning-amber: #fdcb6e;
+  --neutral-gray: #636e72;
+  
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --bg-accent: #e9ecef;
+  --text-primary: #2d3436;
+  --text-secondary: #636e72;
+  
+  --border-radius: 8px;
+  --border-color: #dee2e6;
+  --box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  --box-shadow-hover: 0 4px 12px rgba(0,0,0,0.15);
+  
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================
+   SCROLLBAR CUSTOMIZATION
+   ============================================ */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-accent);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--neutral-gray);
+  border-radius: 4px;
+  transition: var(--transition);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-primary);
+}
+
+/* ============================================
+   STREAMLIT ELEMENT HIDING
+   ============================================ */
+
+/* Hide Streamlit branding */
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
+
+/* Hide deploy button */
+.css-15zrgzn {display: none;}
+.css-eczf16 {display: none;}
+.css-jn99sy {display: none;}
+
+/* ============================================
+   LAYOUT & STRUCTURE
+   ============================================ */
+
+/* Main app container */
+.stApp {
+  background: linear-gradient(135deg, #fafbfc 0%, #f1f3f4 100%);
+  min-height: 100vh;
+}
+
+/* Content areas */
+.main .block-container {
+  padding: 1rem 2rem 2rem;
+  max-width: 1200px;
+}
+
+/* Sidebar styling */
+.css-1d391kg {
+  background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+  border-right: 2px solid var(--border-color);
+  box-shadow: 2px 0 8px rgba(0,0,0,0.1);
+}
+
+.css-1cypc4j {
+  background: transparent;
+}
+
+/* ============================================
+   TYPOGRAPHY
+   ============================================ */
+
+.stApp {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.025em;
+}
+
+.stTitle h1 {
+  background: linear-gradient(135deg, var(--primary-blue), var(--primary-teal));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+
+.stButton > button {
+  background: linear-gradient(135deg, var(--primary-blue), var(--primary-teal));
+  color: white;
+  border: none;
+  border-radius: var(--border-radius);
+  padding: 0.75rem 1.5rem;
+  font-weight: 500;
+  font-size: 0.95rem;
+  letter-spacing: 0.025em;
+  transition: var(--transition);
+  box-shadow: var(--box-shadow);
+  cursor: pointer;
+}
+
+.stButton > button:hover {
+  background: linear-gradient(135deg, var(--primary-teal), var(--primary-blue));
+  transform: translateY(-2px);
+  box-shadow: var(--box-shadow-hover);
+}
+
+.stButton > button:active {
+  transform: translateY(0);
+}
+
+/* Success button variant */
+.stButton.success > button {
+  background: linear-gradient(135deg, var(--success-green), #20c997);
+}
+
+.stButton.success > button:hover {
+  background: linear-gradient(135deg, #20c997, var(--success-green));
+}
+
+/* Danger button variant */
+.stButton.danger > button {
+  background: linear-gradient(135deg, var(--danger-red), #fd7e14);
+}
+
+.stButton.danger > button:hover {
+  background: linear-gradient(135deg, #fd7e14, var(--danger-red));
+}
+
+/* ============================================
+   METRICS & CARDS
+   ============================================ */
+
+[data-testid="metric-container"] {
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: var(--box-shadow);
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+[data-testid="metric-container"]:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--box-shadow-hover);
+}
+
+[data-testid="metric-container"]::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary-blue), var(--primary-teal));
+}
+
+/* Metric values */
+[data-testid="metric-container"] [data-testid="metric-value"] {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* Metric deltas */
+[data-testid="metric-container"] [data-testid="metric-delta"] {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+/* ============================================
+   FORMS & INPUTS
+   ============================================ */
+
+.stSelectbox > div > div,
+.stMultiSelect > div > div,
+.stTextInput > div > div,
+.stTextArea textarea,
+.stNumberInput > div > div {
+  background: white;
+  border: 2px solid var(--border-color);
+  border-radius: var(--border-radius);
+  transition: var(--transition);
+  box-shadow: var(--box-shadow);
+}
+
+.stSelectbox > div > div:focus-within,
+.stMultiSelect > div > div:focus-within,
+.stTextInput > div > div:focus-within,
+.stTextArea textarea:focus,
+.stNumberInput > div > div:focus-within {
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 3px rgba(0, 82, 204, 0.1);
+}
+
+/* Date inputs */
+.stDateInput > div > div {
+  background: white;
+  border: 2px solid var(--border-color);
+  border-radius: var(--border-radius);
+  transition: var(--transition);
+}
+
+/* ============================================
+   SLIDERS
+   ============================================ */
+
+.stSlider > div > div > div {
+  background: linear-gradient(90deg, var(--primary-blue), var(--primary-teal));
+}
+
+.stSlider > div > div > div > div {
+  background: white;
+  border: 2px solid var(--primary-blue);
+  box-shadow: var(--box-shadow);
+}
+
+/* ============================================
+   DATAFRAMES & TABLES
+   ============================================ */
+
+.stDataFrame {
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--box-shadow);
+  background: white;
+}
+
+.dataframe tbody tr:nth-child(even) {
+  background-color: #f8f9fa;
+}
+
+.dataframe tbody tr:hover {
+  background-color: #e3f2fd;
+  transition: var(--transition);
+}
+
+.dataframe thead th {
+  background: linear-gradient(135deg, var(--bg-secondary), var(--bg-accent));
+  color: var(--text-primary);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  border-bottom: 2px solid var(--border-color);
+  padding: 1rem 0.5rem;
+}
+
+.dataframe tbody td {
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 0.75rem 0.5rem;
+}
+
+/* ============================================
+   ALERTS & NOTIFICATIONS
+   ============================================ */
+
+.stAlert {
+  border: none;
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  box-shadow: var(--box-shadow);
+  margin: 1rem 0;
+}
+
+.stSuccess {
+  background: linear-gradient(135deg, #d4edda, #c3e6cb);
+  border-left: 4px solid var(--success-green);
+  color: #155724;
+}
+
+.stError {
+  background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+  border-left: 4px solid var(--danger-red);
+  color: #721c24;
+}
+
+.stWarning {
+  background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+  border-left: 4px solid var(--warning-amber);
+  color: #856404;
+}
+
+.stInfo {
+  background: linear-gradient(135deg, #cce7ff, #b3d9ff);
+  border-left: 4px solid var(--primary-blue);
+  color: #004085;
+}
+
+/* ============================================
+   TABS
+   ============================================ */
+
+.stTabs [data-baseweb="tab-list"] {
+  gap: 8px;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: var(--box-shadow);
+}
+
+.stTabs [data-baseweb="tab"] {
+  height: 50px;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  transition: var(--transition);
+  background: transparent;
+  border: none;
+}
+
+.stTabs [data-baseweb="tab"]:hover {
+  background: rgba(255,255,255,0.5);
+  color: var(--text-primary);
+}
+
+.stTabs [aria-selected="true"] {
+  background: linear-gradient(135deg, var(--primary-blue), var(--primary-teal));
+  color: white;
+  box-shadow: var(--box-shadow);
+}
+
+/* ============================================
+   EXPANDERS
+   ============================================ */
+
+.streamlit-expanderHeader {
+  background: white;
+  border: 2px solid var(--border-color);
+  border-radius: var(--border-radius);
+  color: var(--text-primary);
+  font-weight: 500;
+  transition: var(--transition);
+  box-shadow: var(--box-shadow);
+}
+
+.streamlit-expanderHeader:hover {
+  border-color: var(--primary-blue);
+  box-shadow: var(--box-shadow-hover);
+}
+
+.streamlit-expanderContent {
+  background: white;
+  border: 2px solid var(--border-color);
+  border-top: none;
+  border-radius: 0 0 var(--border-radius) var(--border-radius);
+}
+
+/* ============================================
+   CHARTS & VISUALIZATIONS
+   ============================================ */
+
+.js-plotly-plot {
+  border-radius: 12px;
+  box-shadow: var(--box-shadow);
+  background: white;
+  overflow: hidden;
+}
+
+/* ============================================
+   PROGRESS & LOADING
+   ============================================ */
+
+.stProgress .st-bo {
+  background: linear-gradient(90deg, var(--primary-blue), var(--primary-teal));
+  border-radius: 10px;
+}
+
+.stSpinner {
+  border-color: var(--primary-blue);
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+.profit-text {
+  color: var(--success-green);
+  font-weight: 600;
+}
+
+.loss-text {
+  color: var(--danger-red);
+  font-weight: 600;
+}
+
+.neutral-text {
+  color: var(--neutral-gray);
+  font-weight: 500;
+}
+
+.highlight-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: var(--box-shadow);
+  border-left: 4px solid var(--primary-blue);
+  transition: var(--transition);
+}
+
+.highlight-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--box-shadow-hover);
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.6s ease-out;
+}
+
+.slide-in {
+  animation: slideIn 0.5s ease-out;
+}
+
+.pulse {
+  animation: pulse 2s infinite;
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+@media (max-width: 768px) {
+  .main .block-container {
+    padding: 1rem;
+  }
+  
+  [data-testid="metric-container"] {
+    padding: 1rem;
+  }
+  
+  .stButton > button {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+  }
+  
+  .stTitle h1 {
+    font-size: 2rem;
+  }
+  
+  .dataframe thead th {
+    padding: 0.75rem 0.25rem;
+    font-size: 0.8rem;
+  }
+  
+  .dataframe tbody td {
+    padding: 0.5rem 0.25rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .main .block-container {
+    padding: 0.5rem;
+  }
+  
+  [data-testid="metric-container"] {
+    padding: 0.75rem;
+  }
+  
+  .stTitle h1 {
+    font-size: 1.5rem;
+  }
+}
+
+/* ============================================
+   DARK MODE SUPPORT
+   ============================================ */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #2d3436;
+    --bg-accent: #636e72;
+    --text-primary: #ffffff;
+    --text-secondary: #b2bec3;
+    --border-color: #4a4a4a;
+  }
+  
+  .stApp {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d3436 100%);
+  }
+  
+  [data-testid="metric-container"],
+  .stDataFrame,
+  .highlight-card {
+    background: #2d3436;
+    border-color: #4a4a4a;
+  }
+  
+  .js-plotly-plot {
+    background: #2d3436;
+  }
+}
+
+/* ============================================
+   HIGH CONTRAST MODE
+   ============================================ */
+
+@media (prefers-contrast: high) {
+  :root {
+    --border-color: #000000;
+    --box-shadow: 0 0 0 2px #000000;
+  }
+  
+  .stButton > button {
+    border: 2px solid #000000;
+  }
+  
+  [data-testid="metric-container"] {
+    border: 2px solid #000000;
+  }
+}
+/* ============================================
+   END OF CUSTOM CSS
+   ============================================ */
